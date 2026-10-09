@@ -14,5 +14,5 @@ describe("findSubstitutes", () => {
   const res = findSubstitutes(teachers, slots, "m", "Sunday", 1);
   it("excludes teachers not working that day", () => expect(res.find((r) => r.teacher.id === "c")).toBeUndefined());
   it("excludes teachers who are teaching", () => expect(res.find((r) => r.teacher.id === "d")).toBeUndefined());
-  it("ranks subject match first", () => expect(res[0].teacher.id).toBe("a"));
+  it("ranks subject match first", () => expect(res[0]?.teacher.id).toBe("a"));
 });

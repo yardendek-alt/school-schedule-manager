@@ -10,12 +10,12 @@ export interface Teacher {
   id: string; name: string; phone: string; subjects: string[]; max_weekly_hours: number; working_days: Day[];
 }
 export interface Slot {
-  day_of_week: Day; period: number; teacher_id: string; activity_type: Activity; subject?: string; class_room?: string;
-  substitute_for?: string;
+  day_of_week: Day; period: number; teacher_id: string; activity_type: Activity; subject?: string | undefined; class_room?: string | undefined;
+  substitute_for?: string | undefined;
 }
 export interface Substitution {
   id: string; date: string; day: Day; period: number; original_teacher_id: string; substitute_teacher_id: string;
-  reason: string; status: "ממתין לאישור" | "אושר" | "בוטל"; subject?: string; class_room?: string;
+  reason: string; status: "ממתין לאישור" | "אושר" | "בוטל"; subject?: string | undefined; class_room?: string | undefined;
 }
 
 export const TEACHERS: Teacher[] = [
@@ -47,7 +47,7 @@ export function buildSchedule(): Slot[] {
         if (!working || p > maxP) { slots.push({ day_of_week: d, period: p, teacher_id: t.id, activity_type: "חלון" }); return; }
         const x = r();
         let a: Activity = x < 0.6 ? "הוראה" : x < 0.75 ? "שהייה" : x < 0.87 ? "פרטני" : "חלון";
-        const subject = t.subjects[Math.floor(r() * t.subjects.length)];
+        const subject = t.subjects[Math.floor(r() * t.subjects.length)] ?? t.subjects[0];
         slots.push({
           day_of_week: d, period: p, teacher_id: t.id, activity_type: a,
           subject: a === "חלון" ? undefined : subject,
@@ -90,5 +90,5 @@ export function findSubstitutes(teachers: Teacher[], slots: Slot[], missingId: s
 
 export function dayFromDate(date: string): Day | null {
   const d = new Date(date + "T12:00:00").getDay();
-  return d === 6 ? null : DAYS[d];
+  return d === 6 ? null : (DAYS[d] ?? null);
 }

@@ -143,7 +143,7 @@ function StatusBadge({ s }: { s: Substitution["status"] }) {
 
 function Dashboard({ slots, subs, tName, setSubs, onNotify, goFinder }: any) {
   const todayIdx = new Date().getDay();
-  const today: Day = todayIdx === 6 ? "Sunday" : DAYS[todayIdx];
+  const today: Day = (todayIdx === 6 ? "Sunday" : DAYS[todayIdx]) ?? "Sunday";
   const counts = (["הוראה", "שהייה", "פרטני"] as Activity[]).map((a) => ({ a, n: slots.filter((s: Slot) => s.activity_type === a).length }));
   return (
     <div className="space-y-6">
@@ -194,7 +194,7 @@ function Stat({ label, value, badge }: { label: string; value: number; badge?: A
   );
 }
 
-function SlotCell({ s }: { s?: Slot }) {
+function SlotCell({ s }: { s?: Slot | undefined }) {
   if (!s || s.activity_type === "חלון") return <div className={`h-full min-h-14 rounded-md border border-dashed p-1.5 text-xs ${BADGE["חלון"]}`}>חלון</div>;
   return (
     <div className={`h-full min-h-14 rounded-md border p-1.5 text-xs ${BADGE[s.activity_type]} ${s.substitute_for ? "ring-2 ring-success" : ""}`}>
@@ -232,7 +232,7 @@ function Legend() {
 const SUBJECTS = Array.from(new Set(TEACHERS.flatMap((t) => t.subjects)));
 
 function ScheduleView({ slots, teachers }: { slots: Slot[]; teachers: Teacher[] }) {
-  const [tid, setTid] = useState(teachers[0].id);
+  const [tid, setTid] = useState(teachers[0]!.id);
   const [subject, setSubject] = useState("");
   const [day, setDay] = useState<Day | "">("");
   const mode = day ? "day" : "teacher";
@@ -246,7 +246,7 @@ function ScheduleView({ slots, teachers }: { slots: Slot[]; teachers: Teacher[] 
         <Field label="מקצוע"><select className="input" value={subject} onChange={(e) => {
           setSubject(e.target.value);
           const f = teachers.filter((t) => !e.target.value || t.subjects.includes(e.target.value));
-          if (f.length && !f.find((t) => t.id === tid)) setTid(f[0].id);
+          if (f.length && !f.find((t) => t.id === tid)) setTid(f[0]!.id);
         }}>
           <option value="">כל המקצועות</option>{SUBJECTS.map((s) => <option key={s}>{s}</option>)}</select></Field>
         <Field label="יום (תצוגת כל המורים)"><select className="input" value={day} onChange={(e) => setDay(e.target.value as Day | "")}>
@@ -281,7 +281,7 @@ function TeachersView({ slots, teachers }: { slots: Slot[]; teachers: Teacher[] 
                 <td className="p-3 font-medium">{t.name}</td>
                 <td className="p-3"><span className="flex items-center gap-1" dir="ltr"><Phone className="h-3 w-3" />{t.phone}</span></td>
                 <td className="p-3"><div className="flex flex-wrap gap-1">{t.subjects.map((s) => <span key={s} className={`rounded-full border px-2 py-0.5 text-xs ${BADGE["הוראה"]}`}>{s}</span>)}</div></td>
-                <td className="p-3"><div className="flex flex-wrap gap-1">{DAYS.map((d) => <span key={d} className={`rounded px-1.5 py-0.5 text-xs ${t.working_days.includes(d) ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground line-through"}`}>{DAY_HE[d][0]}'</span>)}</div></td>
+                <td className="p-3"><div className="flex flex-wrap gap-1">{DAYS.map((d) => <span key={d} className={`rounded px-1.5 py-0.5 text-xs ${t.working_days.includes(d) ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground line-through"}`}>{DAY_HE[d].charAt(0)}'</span>)}</div></td>
                 <td className="p-3 min-w-40"><div className="flex items-center gap-2"><div className="h-2 flex-1 rounded-full bg-muted"><div className={`h-2 rounded-full ${h >= t.max_weekly_hours ? "bg-destructive" : "bg-primary"}`} style={{ width: `${pct}%` }} /></div><span className="text-xs">{h}/{t.max_weekly_hours}</span></div></td>
               </tr>);
           })}</tbody>
@@ -296,7 +296,7 @@ function Finder({ slots, teachers, onAssign }: { slots: Slot[]; teachers: Teache
   const autoDay = dayFromDate(date);
   const [dayOverride, setDayOverride] = useState<Day | "">("");
   const day: Day = (dayOverride || autoDay || "Sunday") as Day;
-  const [missing, setMissing] = useState(teachers[0].id);
+  const [missing, setMissing] = useState(teachers[0]!.id);
   const [periods, setPeriods] = useState<number[]>([]);
   const [reason, setReason] = useState("מחלה");
   const [run, setRun] = useState(false);
@@ -384,8 +384,8 @@ function NotifyDrawer({ sub, teachers, onClose, onSent }: { sub: Substitution; t
             <div className="whitespace-pre-line rounded-lg rounded-tr-none bg-chat p-3 text-sm text-chat-foreground">{m.text}</div>
             <div className="mt-1 text-xs text-muted-foreground">WhatsApp / SMS</div>
           </div>))}</div>
-        <button className="btn-primary mt-5 w-full justify-center" disabled={sent.all} onClick={() => { setSent({ all: true }); onSent(); }}>
-          {sent.all ? <><CheckCircle2 className="h-4 w-4" />ההתראות נשלחו (סימולציה)</> : <><Send className="h-4 w-4" />שלח התראה (סימולציה)</>}
+        <button className="btn-primary mt-5 w-full justify-center" disabled={sent["all"]} onClick={() => { setSent({ all: true }); onSent(); }}>
+          {sent["all"] ? <><CheckCircle2 className="h-4 w-4" />ההתראות נשלחו (סימולציה)</> : <><Send className="h-4 w-4" />שלח התראה (סימולציה)</>}
         </button>
       </aside>
     </div>
