@@ -52,6 +52,11 @@
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
   --color-sidebar: var(--sidebar);
+  --font-sans: "Heebo", system-ui, sans-serif;
+  --color-teach: var(--teach); --color-teach-foreground: var(--teach-foreground); --color-teach-border: var(--teach-border);
+  --color-prep: var(--prep); --color-prep-foreground: var(--prep-foreground); --color-prep-border: var(--prep-border);
+  --color-indiv: var(--indiv); --color-indiv-foreground: var(--indiv-foreground); --color-indiv-border: var(--indiv-border);
+  --color-success: var(--success); --color-chat: var(--chat); --color-chat-foreground: var(--chat-foreground);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-primary: var(--sidebar-primary);
   --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
@@ -95,6 +100,14 @@
   --sidebar-accent-foreground: oklch(0.208 0.042 265.755);
   --sidebar-border: oklch(0.929 0.013 255.508);
   --sidebar-ring: oklch(0.704 0.04 256.788);
+  --background: oklch(0.975 0.006 240);
+  --primary: oklch(0.42 0.11 245);
+  --primary-foreground: oklch(0.99 0 0);
+  --teach: oklch(0.93 0.05 245); --teach-foreground: oklch(0.36 0.12 250); --teach-border: oklch(0.82 0.08 245);
+  --prep: oklch(0.95 0.07 75); --prep-foreground: oklch(0.45 0.12 55); --prep-border: oklch(0.85 0.11 70);
+  --indiv: oklch(0.94 0.05 305); --indiv-foreground: oklch(0.42 0.16 305); --indiv-border: oklch(0.84 0.09 305);
+  --success: oklch(0.58 0.14 155);
+  --chat: oklch(0.93 0.07 145); --chat-foreground: oklch(0.25 0.04 150);
 }
 
 .dark {
@@ -142,3 +155,7 @@
     color: var(--color-foreground);
   }
 }
+
+@utility btn-primary { display:inline-flex; align-items:center; gap:.5rem; border-radius:.5rem; padding:.5rem 1rem; font-weight:500; background:var(--primary); color:var(--primary-foreground); transition:opacity .15s; &:hover{opacity:.9} &:disabled{opacity:.5;cursor:not-allowed} }
+@utility btn-ghost { display:inline-flex; align-items:center; gap:.25rem; border-radius:.5rem; padding:.375rem .625rem; &:hover{background:var(--accent)} }
+@utility input { border:1px solid var(--input); border-radius:.5rem; padding:.5rem .75rem; background:var(--card); &:disabled{opacity:.5} }
