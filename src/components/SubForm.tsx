@@ -1,7 +1,7 @@
 import { Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DAY_HE, type Day, type Slot, type Substitution, type Teacher } from "@/lib/school";
-import { classroomAssignments, normalizeClassroom as norm, plannedFormData, substituteOriginalActivity } from "@/lib/sub-form";
+import { activityShortLabel, classroomAssignments, normalizeClassroom as norm, plannedFormData, substituteOriginalActivity } from "@/lib/sub-form";
 import type { AbsencePlan } from "@/lib/substitution-workflow";
 
 // Columns follow the school's printed "מ"מ מורות" form (class + homeroom teacher)
@@ -16,7 +16,8 @@ export function SubForm({ date, day, subs, teachers, baseSlots, plans }: { date:
   const name = (id: string) => teachers.find((t) => t.id === id)?.name ?? "";
   const replacementLabel = (sub: Substitution) => {
     const activity = substituteOriginalActivity(sub, baseSlots);
-    return `${name(sub.substitute_teacher_id)}${activity ? ` (${activity === "פרטני" ? "מ" : "ש"})` : ""}`;
+    const short = activityShortLabel(activity);
+    return `${name(sub.substitute_teacher_id)}${short ? ` (${short})` : ""}`;
   };
   const { assignments: list, uncovered, missingTeacherIds: missing } = plannedFormData(plans, baseSlots, subs, date, day);
   const noClass = list.filter((s) => !CLASSES.some(([c]) => norm(c) === norm(s.class_room)));
@@ -51,7 +52,7 @@ export function SubForm({ date, day, subs, teachers, baseSlots, plans }: { date:
                     <div className="sub-form-cell flex flex-col items-center justify-center gap-0.5">
                       {p >= 8 && ci < LEAD_UNTIL && <div>{c === "ד'1" ? "מוביל" : "מובילה"}</div>}
                       {replacements.map((sub) => <div key={sub.id} className="w-full break-words font-semibold text-primary">{replacementLabel(sub)}</div>)}
-                      {needsSubstitute && <div className="text-base font-extrabold text-destructive">מ"מ</div>}
+                      {needsSubstitute && <div className="text-base text-destructive">מ"מ</div>}
                     </div>
                   </td>;
                 })}
@@ -69,7 +70,7 @@ export function SubForm({ date, day, subs, teachers, baseSlots, plans }: { date:
       {(noClass.length > 0 || uncovered.some((slot) => !CLASSES.some(([c]) => norm(c) === norm(slot.class_room)))) && (
         <div className="mt-2 text-xs text-muted-foreground">
           {noClass.length > 0 && <div>שיבוצים ללא כיתה בטופס: {noClass.map((s) => `${replacementLabel(s)} במקום ${name(s.original_teacher_id)} (שיעור ${s.period}${s.class_room ? `, ${s.class_room}` : ""})`).join(" · ")}</div>}
-          {uncovered.filter((slot) => !CLASSES.some(([c]) => norm(c) === norm(slot.class_room))).map((slot, i) => <div key={i} className="font-bold text-destructive">מ"מ — {name(slot.teacher_id)}, שיעור {slot.period}{slot.class_room ? `, ${slot.class_room}` : ""}</div>)}
+          {uncovered.filter((slot) => !CLASSES.some(([c]) => norm(c) === norm(slot.class_room))).map((slot, i) => <div key={i} className="text-destructive">מ"מ — {name(slot.teacher_id)}, שיעור {slot.period}{slot.class_room ? `, ${slot.class_room}` : ""}</div>)}
         </div>
       )}
     </div>
