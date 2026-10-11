@@ -1,3 +1,4 @@
-- [x] Show each substitute's original activity and names-only missing-teacher footer.
-- [x] Restrict replacement selection to teaching periods in both modes.
-- [x] Verify matching tests and the visible finder/form.
+- [ ] Plan all absent teachers and hours before matching.
+- [ ] Process teachers sequentially with editable, visible selections and completion marks.
+- [ ] Save selections and changes without double bookings; show final daily form.
+- [ ] Verify workflow and conflict tests.
