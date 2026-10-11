@@ -177,7 +177,7 @@ function Dashboard({ slots, subs, tName, setSubs, onNotify, goFinder }: any) {
         {counts.map((c) => <Stat key={c.a} label={`שעות ${c.a}`} value={c.n} badge={c.a} />)}
       </div>
       <Card title={`יום ${DAY_HE[today]} — כל המורים`} icon={CalendarDays}>
-        <Grid rows={TEACHERS.map((t) => ({ label: t.name, cells: PERIODS.map((p) => slots.find((s: Slot) => s.teacher_id === t.id && s.day_of_week === today && s.period === p)) }))} />
+        <Grid rows={TEACHERS.map((t) => ({ label: t.name, cells: PERIODS.map((p) => ({ s: slots.find((s: Slot) => s.teacher_id === t.id && s.day_of_week === today && s.period === p), off: !t.working_days.includes(today) })) }))} />
       </Card>
       <Card title="יומן מילוי מקום" icon={ClipboardList}>
         {subs.length === 0 ? <p className="py-6 text-center text-muted-foreground">אין עדיין מילויי מקום. השתמשו ב"מילוי מקום" כדי לשבץ.</p> : (
@@ -273,8 +273,8 @@ function ScheduleView({ slots, teachers }: { slots: Slot[]; teachers: Teacher[] 
       </div>
       <Card title={mode === "day" ? `יום ${DAY_HE[day as Day]}` : `מערכת של ${teachers.find((t) => t.id === tid)?.name}`} icon={CalendarDays}>
         {mode === "day"
-          ? <Grid rows={filteredTeachers.map((t) => ({ label: t.name, cells: PERIODS.map((p) => slots.find((s) => s.teacher_id === t.id && s.day_of_week === day && s.period === p)) }))} />
-          : <Grid rows={DAYS.map((d) => ({ label: DAY_HE[d], cells: PERIODS.map((p) => slots.find((s) => s.teacher_id === tid && s.day_of_week === d && s.period === p)) }))} />}
+          ? <Grid rows={filteredTeachers.map((t) => ({ label: t.name, cells: PERIODS.map((p) => ({ s: slots.find((s) => s.teacher_id === t.id && s.day_of_week === day && s.period === p), off: !t.working_days.includes(day as Day) })) }))} />
+          : <Grid rows={DAYS.map((d) => ({ label: DAY_HE[d], cells: PERIODS.map((p) => ({ s: slots.find((s) => s.teacher_id === tid && s.day_of_week === d && s.period === p), off: !teachers.find((t) => t.id === tid)?.working_days.includes(d) })) }))} />}
       </Card>
     </div>
   );
