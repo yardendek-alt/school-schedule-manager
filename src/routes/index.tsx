@@ -212,7 +212,8 @@ function Stat({ label, value, badge }: { label: string; value: number; badge?: A
   );
 }
 
-function SlotCell({ s }: { s?: Slot | undefined }) {
+function SlotCell({ s, off }: { s?: Slot | undefined; off?: boolean }) {
+  if (off) return <div className="h-full min-h-14 rounded-md bg-muted/40" title="לא עובד/ת" />;
   if (!s || s.activity_type === "חלון") return <div className={`h-full min-h-14 rounded-md border border-dashed p-1.5 text-xs ${BADGE["חלון"]}`}>חלון</div>;
   return (
     <div className={`h-full min-h-14 rounded-md border p-1.5 text-xs ${BADGE[s.activity_type]} ${s.substitute_for ? "ring-2 ring-success" : ""}`}>
@@ -223,14 +224,14 @@ function SlotCell({ s }: { s?: Slot | undefined }) {
   );
 }
 
-function Grid({ rows }: { rows: { label: string; cells: (Slot | undefined)[] }[] }) {
+function Grid({ rows }: { rows: { label: string; cells: { s?: Slot; off?: boolean }[] }[] }) {
   return (
     <div className="overflow-x-auto">
       <table className="w-full min-w-[800px] border-separate border-spacing-1 text-sm">
         <thead><tr><th className="w-28"></th>{PERIODS.map((p) => <th key={p} className="font-medium text-muted-foreground">שעה {p}</th>)}</tr></thead>
         <tbody>{rows.map((r) => (
           <tr key={r.label}><td className="whitespace-nowrap ps-1 font-medium">{r.label}</td>
-            {r.cells.map((c, i) => <td key={i} className="align-top"><SlotCell s={c} /></td>)}</tr>
+            {r.cells.map((c, i) => <td key={i} className="align-top"><SlotCell s={c.s} off={c.off} /></td>)}</tr>
         ))}</tbody>
       </table>
       <Legend />
