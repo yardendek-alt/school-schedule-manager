@@ -177,7 +177,7 @@ function Dashboard({ slots, subs, tName, setSubs, onNotify, goFinder }: any) {
         {counts.map((c) => <Stat key={c.a} label={`שעות ${c.a}`} value={c.n} badge={c.a} />)}
       </div>
       <Card title={`יום ${DAY_HE[today]} — כל המורים`} icon={CalendarDays}>
-        <Grid rows={TEACHERS.map((t) => ({ label: t.name, cells: PERIODS.map((p) => slots.find((s: Slot) => s.teacher_id === t.id && s.day_of_week === today && s.period === p)) }))} />
+        <Grid rows={TEACHERS.map((t) => ({ label: t.name, cells: PERIODS.map((p) => ({ s: slots.find((s: Slot) => s.teacher_id === t.id && s.day_of_week === today && s.period === p), off: !t.working_days.includes(today) })) }))} />
       </Card>
       <Card title="יומן מילוי מקום" icon={ClipboardList}>
         {subs.length === 0 ? <p className="py-6 text-center text-muted-foreground">אין עדיין מילויי מקום. השתמשו ב"מילוי מקום" כדי לשבץ.</p> : (
@@ -212,7 +212,8 @@ function Stat({ label, value, badge }: { label: string; value: number; badge?: A
   );
 }
 
-function SlotCell({ s }: { s?: Slot | undefined }) {
+function SlotCell({ s, off }: { s?: Slot | undefined; off?: boolean | undefined }) {
+  if (off) return <div className="h-full min-h-14 rounded-md bg-muted/40" title="לא עובד/ת" />;
   if (!s || s.activity_type === "חלון") return <div className={`h-full min-h-14 rounded-md border border-dashed p-1.5 text-xs ${BADGE["חלון"]}`}>חלון</div>;
   return (
     <div className={`h-full min-h-14 rounded-md border p-1.5 text-xs ${BADGE[s.activity_type]} ${s.substitute_for ? "ring-2 ring-success" : ""}`}>
@@ -223,14 +224,14 @@ function SlotCell({ s }: { s?: Slot | undefined }) {
   );
 }
 
-function Grid({ rows }: { rows: { label: string; cells: (Slot | undefined)[] }[] }) {
+function Grid({ rows }: { rows: { label: string; cells: { s?: Slot | undefined; off?: boolean }[] }[] }) {
   return (
     <div className="overflow-x-auto">
       <table className="w-full min-w-[800px] border-separate border-spacing-1 text-sm">
         <thead><tr><th className="w-28"></th>{PERIODS.map((p) => <th key={p} className="font-medium text-muted-foreground">שעה {p}</th>)}</tr></thead>
         <tbody>{rows.map((r) => (
           <tr key={r.label}><td className="whitespace-nowrap ps-1 font-medium">{r.label}</td>
-            {r.cells.map((c, i) => <td key={i} className="align-top"><SlotCell s={c} /></td>)}</tr>
+            {r.cells.map((c, i) => <td key={i} className="align-top"><SlotCell s={c.s} off={c.off} /></td>)}</tr>
         ))}</tbody>
       </table>
       <Legend />
@@ -272,8 +273,8 @@ function ScheduleView({ slots, teachers }: { slots: Slot[]; teachers: Teacher[] 
       </div>
       <Card title={mode === "day" ? `יום ${DAY_HE[day as Day]}` : `מערכת של ${teachers.find((t) => t.id === tid)?.name}`} icon={CalendarDays}>
         {mode === "day"
-          ? <Grid rows={filteredTeachers.map((t) => ({ label: t.name, cells: PERIODS.map((p) => slots.find((s) => s.teacher_id === t.id && s.day_of_week === day && s.period === p)) }))} />
-          : <Grid rows={DAYS.map((d) => ({ label: DAY_HE[d], cells: PERIODS.map((p) => slots.find((s) => s.teacher_id === tid && s.day_of_week === d && s.period === p)) }))} />}
+          ? <Grid rows={filteredTeachers.map((t) => ({ label: t.name, cells: PERIODS.map((p) => ({ s: slots.find((s) => s.teacher_id === t.id && s.day_of_week === day && s.period === p), off: !t.working_days.includes(day as Day) })) }))} />
+          : <Grid rows={DAYS.map((d) => ({ label: DAY_HE[d], cells: PERIODS.map((p) => ({ s: slots.find((s) => s.teacher_id === tid && s.day_of_week === d && s.period === p), off: !teachers.find((t) => t.id === tid)?.working_days.includes(d) })) }))} />}
       </Card>
     </div>
   );
@@ -314,11 +315,12 @@ function Finder({ slots, teachers, onAssign }: { slots: Slot[]; teachers: Teache
   const autoDay = dayFromDate(date);
   const isSaturday = !autoDay;
   const day: Day = (autoDay ?? "Sunday") as Day;
-  const [missing, setMissing] = useState(teachers[0]!.id);
+  const [missing, setMissing] = useState(teachers[0]?.id ?? "");
   const [periods, setPeriods] = useState<number[]>([]);
   const [reason, setReason] = useState("מחלה");
   const [run, setRun] = useState(false);
-  const mt = teachers.find((t) => t.id === missing)!;
+  const mt = teachers.find((t) => t.id === missing);
+  if (!mt) return <p className="text-muted-foreground">לא נמצאו מורים במערכת.</p>;
   const toggle = (p: number) => setPeriods((x) => x.includes(p) ? x.filter((y) => y !== p) : [...x, p].sort());
 
   const results = useMemo(() => run ? periods.map((p) => ({ p, slot: slots.find((s) => s.teacher_id === missing && s.day_of_week === day && s.period === p), cands: findSubstitutes(teachers, slots, missing, day, p) })) : [], [run, periods, slots, missing, day, teachers]);
