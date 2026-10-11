@@ -239,6 +239,44 @@ function Grid({ rows }: { rows: { label: string; cells: { s?: Slot | undefined; 
   );
 }
 
+// שעה 0 מתחילה ב-7:30; כל שעה = 30 דקות
+export function periodTime(p: number) {
+  const start = 7 * 60 + 30 + p * 30;
+  const f = (m: number) => `${Math.floor(m / 60)}:${String(m % 60).padStart(2, "0")}`;
+  return `${f(start)}–${f(start + 30)}`;
+}
+
+function WeekGrid({ slots, teacher }: { slots: Slot[]; teacher?: Teacher | undefined }) {
+  if (!teacher) return null;
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full min-w-[800px] border-separate border-spacing-1 text-sm">
+        <thead><tr>
+          <th className="w-32"></th>
+          {DAYS.map((d) => <th key={d} className="font-medium text-muted-foreground">יום {DAY_HE[d]}</th>)}
+        </tr></thead>
+        <tbody>{PERIODS.map((p) => (
+          <tr key={p}>
+            <td className="whitespace-nowrap ps-1 align-top">
+              <div className="font-medium">שעה {p}</div>
+              <div className="text-xs text-muted-foreground" dir="ltr">{periodTime(p)}</div>
+            </td>
+            {DAYS.map((d) => (
+              <td key={d} className="align-top">
+                <SlotCell
+                  s={slots.find((s) => s.teacher_id === teacher.id && s.day_of_week === d && s.period === p)}
+                  off={!teacher.working_days.includes(d)}
+                />
+              </td>
+            ))}
+          </tr>
+        ))}</tbody>
+      </table>
+      <Legend />
+    </div>
+  );
+}
+
 function Legend() {
   return (
     <div className="mt-3 flex flex-wrap gap-3 text-xs">
