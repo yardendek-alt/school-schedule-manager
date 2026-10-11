@@ -3,7 +3,7 @@ export const DAYS: Day[] = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursda
 export const DAY_HE: Record<Day, string> = {
   Sunday: "ראשון", Monday: "שני", Tuesday: "שלישי", Wednesday: "רביעי", Thursday: "חמישי", Friday: "שישי",
 };
-export const PERIODS = [1, 2, 3, 4, 5, 6, 7, 8];
+export const PERIODS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 export type Activity = "הוראה" | "שהייה" | "פרטני" | "חלון";
 
 export interface Teacher {
@@ -18,46 +18,8 @@ export interface Substitution {
   reason: string; status: "ממתין לאישור" | "אושר" | "בוטל"; subject?: string | undefined; class_room?: string | undefined;
 }
 
-export const TEACHERS: Teacher[] = [
-  { id: "t1", name: "רחל כהן", phone: "050-1234567", subjects: ["מתמטיקה"], max_weekly_hours: 26, working_days: ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday"] },
-  { id: "t2", name: "יוסי לוי", phone: "052-2345678", subjects: ["מדעים", "ביולוגיה"], max_weekly_hours: 24, working_days: ["Sunday", "Monday", "Tuesday", "Thursday", "Friday"] },
-  { id: "t3", name: "מיכל אברהם", phone: "054-3456789", subjects: ["אנגלית"], max_weekly_hours: 22, working_days: ["Sunday", "Tuesday", "Wednesday", "Thursday", "Friday"] },
-  { id: "t4", name: "דוד מזרחי", phone: "053-4567890", subjects: ["היסטוריה", "אזרחות"], max_weekly_hours: 20, working_days: ["Monday", "Tuesday", "Wednesday", "Thursday"] },
-  { id: "t5", name: "נועה פרץ", phone: "050-5678901", subjects: ["מתמטיקה", "פיזיקה"], max_weekly_hours: 28, working_days: ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday"] },
-  { id: "t6", name: "אבי ביטון", phone: "058-6789012", subjects: ["חינוך גופני"], max_weekly_hours: 24, working_days: ["Sunday", "Monday", "Wednesday", "Thursday", "Friday"] },
-  { id: "t7", name: "שירה גולן", phone: "052-7890123", subjects: ["עברית", "ספרות"], max_weekly_hours: 24, working_days: ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday"] },
-  { id: "t8", name: "עמית שפירא", phone: "054-8901234", subjects: ["מדעים", "כימיה"], max_weekly_hours: 22, working_days: ["Sunday", "Monday", "Tuesday", "Wednesday", "Friday"] },
-];
-
-const CLASSES = ["ז'1", "ז'2", "ח'1", "ח'2", "ט'1", "ט'2"];
-
-function rand(seed: number) {
-  let s = seed;
-  return () => { s = (s * 9301 + 49297) % 233280; return s / 233280; };
-}
-
-export function buildSchedule(): Slot[] {
-  const slots: Slot[] = [];
-  TEACHERS.forEach((t, ti) => {
-    const r = rand(ti * 97 + 13);
-    DAYS.forEach((d) => {
-      const working = t.working_days.includes(d);
-      const maxP = d === "Friday" ? 5 : 8;
-      PERIODS.forEach((p) => {
-        if (!working || p > maxP) { slots.push({ day_of_week: d, period: p, teacher_id: t.id, activity_type: "חלון" }); return; }
-        const x = r();
-        let a: Activity = x < 0.6 ? "הוראה" : x < 0.75 ? "שהייה" : x < 0.87 ? "פרטני" : "חלון";
-        const subject = t.subjects[Math.floor(r() * t.subjects.length)] ?? t.subjects[0];
-        slots.push({
-          day_of_week: d, period: p, teacher_id: t.id, activity_type: a,
-          subject: a === "חלון" ? undefined : subject,
-          class_room: a === "הוראה" || a === "פרטני" ? `כיתה ${CLASSES[Math.floor(r() * CLASSES.length)]}` : undefined,
-        });
-      });
-    });
-  });
-  return slots;
-}
+export let TEACHERS: Teacher[] = [];
+export function setTeachers(t: Teacher[]) { TEACHERS = t; }
 
 export function weeklyHours(slots: Slot[], tid: string) {
   return slots.filter((s) => s.teacher_id === tid && s.activity_type !== "חלון").length;
