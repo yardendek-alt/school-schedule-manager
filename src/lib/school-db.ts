@@ -33,6 +33,16 @@ export async function saveSub(s: Substitution) {
   if (error) throw error;
 }
 
+export async function saveWorkflowAssignments(subs: Substitution[]) {
+  if (!subs.length) return;
+  const { error } = await supabase.from("substitutions").upsert(subs.map((s) => ({
+    id: s.id, date: s.date, day_of_week: s.day, period: s.period,
+    original_teacher_id: s.original_teacher_id, substitute_teacher_id: s.substitute_teacher_id,
+    reason: s.reason, status: s.status, subject: s.subject ?? null, class_room: s.class_room ?? null,
+  })), { onConflict: "id" });
+  if (error) throw error;
+}
+
 export async function saveStatus(id: string, status: Substitution["status"]) {
   await supabase.from("substitutions").update({ status }).eq("id", id);
 }

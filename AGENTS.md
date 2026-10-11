@@ -10,3 +10,4 @@
 <!-- LOVABLE:END -->
 
 - Keep daily-form classroom matching in a browser-safe helper shared with tests, so assignments reliably map to template cells despite classroom punctuation differences.
+- Keep multi-teacher substitution planning in a dedicated component with browser-safe planning helpers; stage editable choices locally and persist each teacher's changes in one batch before advancing to avoid duplicate active assignments.
