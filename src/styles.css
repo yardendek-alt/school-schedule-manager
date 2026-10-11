@@ -160,7 +160,15 @@
 @utility btn-ghost { display:inline-flex; align-items:center; gap:.25rem; border-radius:.5rem; padding:.375rem .625rem; &:hover{background:var(--accent)} }
 @utility input { border:1px solid var(--input); border-radius:.5rem; padding:.5rem .75rem; background:var(--card); &:disabled{opacity:.5} }
 
+.sub-form-cell {
+  height: 4rem;
+  padding: 0.125rem;
+  overflow: auto;
+}
+
 @media print {
+  .sub-form-cell { height: 3rem; overflow: visible; font-size: 9px; }
+  .sub-form-table { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
   body * { visibility: hidden; }
   .print-area, .print-area * { visibility: visible; }
   .print-area { position: absolute; inset: 0; border: 0; }
