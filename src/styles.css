@@ -159,3 +159,11 @@
 @utility btn-primary { display:inline-flex; align-items:center; gap:.5rem; border-radius:.5rem; padding:.5rem 1rem; font-weight:500; background:var(--primary); color:var(--primary-foreground); transition:opacity .15s; &:hover{opacity:.9} &:disabled{opacity:.5;cursor:not-allowed} }
 @utility btn-ghost { display:inline-flex; align-items:center; gap:.25rem; border-radius:.5rem; padding:.375rem .625rem; &:hover{background:var(--accent)} }
 @utility input { border:1px solid var(--input); border-radius:.5rem; padding:.5rem .75rem; background:var(--card); &:disabled{opacity:.5} }
+
+@media print {
+  body * { visibility: hidden; }
+  .print-area, .print-area * { visibility: visible; }
+  .print-area { position: absolute; inset: 0; border: 0; }
+  .no-print { display: none !important; }
+  @page { size: A4 landscape; margin: 10mm; }
+}
