@@ -398,7 +398,6 @@ function Finder({ slots, teachers, subs, onAssign }: { slots: Slot[]; teachers: 
   const [absent, setAbsent] = useState<string[]>([]);
   const busy = useMemo(() => busyOnDate(subs, date, [...absent, missing]), [subs, date, absent, missing]);
   const mt = teachers.find((t) => t.id === missing);
-  if (!mt) return <p className="text-muted-foreground">לא נמצאו מורים במערכת.</p>;
   const toggle = (p: number) => setPeriods((x) => x.includes(p) ? x.filter((y) => y !== p) : [...x, p].sort());
   const teachPs = teachingPeriods(slots, missing, day);
 
@@ -407,6 +406,7 @@ function Finder({ slots, teachers, subs, onAssign }: { slots: Slot[]; teachers: 
   const results = useMemo(() => run ? list.map((p) => ({ p, slot: slots.find((s) => s.teacher_id === missing && s.day_of_week === day && s.period === p), cands: findSubstitutes(teachers, slots, missing, day, p, date, busy) })) : [], [run, list.join(","), slots, missing, day, teachers, date, busy]);
   const dayResults = useMemo(() => run && mode === "day" ? findWholeDaySubstitutes(teachers, slots, missing, day, date, busy) : [], [run, mode, slots, missing, day, teachers, date, busy]);
 
+  if (!mt) return <p className="text-muted-foreground">לא נמצאו מורים במערכת.</p>;
   const statusLabel = (c: Candidate) => {
     const sts = c.statuses ?? [c.status];
     return sts.map((s) => (s === "שהייה" ? "בשהייה" : "בפרטני")).join(" + ");
