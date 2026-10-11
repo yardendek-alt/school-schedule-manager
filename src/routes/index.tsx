@@ -315,11 +315,12 @@ function Finder({ slots, teachers, onAssign }: { slots: Slot[]; teachers: Teache
   const autoDay = dayFromDate(date);
   const isSaturday = !autoDay;
   const day: Day = (autoDay ?? "Sunday") as Day;
-  const [missing, setMissing] = useState(teachers[0]!.id);
+  const [missing, setMissing] = useState(teachers[0]?.id ?? "");
   const [periods, setPeriods] = useState<number[]>([]);
   const [reason, setReason] = useState("מחלה");
   const [run, setRun] = useState(false);
-  const mt = teachers.find((t) => t.id === missing)!;
+  const mt = teachers.find((t) => t.id === missing);
+  if (!mt) return <p className="text-muted-foreground">לא נמצאו מורים במערכת.</p>;
   const toggle = (p: number) => setPeriods((x) => x.includes(p) ? x.filter((y) => y !== p) : [...x, p].sort());
 
   const results = useMemo(() => run ? periods.map((p) => ({ p, slot: slots.find((s) => s.teacher_id === missing && s.day_of_week === day && s.period === p), cands: findSubstitutes(teachers, slots, missing, day, p) })) : [], [run, periods, slots, missing, day, teachers]);
