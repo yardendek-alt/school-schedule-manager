@@ -5,7 +5,7 @@ import {
   LayoutDashboard, Users, CalendarDays, UserSearch, Phone, CheckCircle2, X, Send, MessageSquare, School, Bell, ClipboardList,
 } from "lucide-react";
 import {
-  TEACHERS, DAYS, DAY_HE, PERIODS, findSubstitutes, findWholeDaySubstitutes, teachingPeriods, weeklyHours, dayFromDate,
+  TEACHERS, DAYS, DAY_HE, PERIODS, findSubstitutes, findWholeDaySubstitutes, busyOnDate, teachingPeriods, weeklyHours, dayFromDate,
   type Activity, type Day, type Slot, type Substitution, type Teacher, type Candidate,
 } from "@/lib/school";
 import { loadAll, saveSub, saveStatus, applySub, saveAway } from "@/lib/school-db";
@@ -107,7 +107,7 @@ function App() {
         {view === "dashboard" && <Dashboard slots={slots} subs={subs} tName={tName} setSubs={setSubs} onNotify={setNotify} goFinder={() => setView("finder")} />}
         {view === "schedule" && <ScheduleView slots={slots} teachers={teachers} />}
         {view === "teachers" && <TeachersView slots={slots} teachers={teachers} />}
-        {view === "finder" && <Finder slots={slots} teachers={teachers} onAssign={assign} />}
+        {view === "finder" && <Finder slots={slots} teachers={teachers} subs={subs} onAssign={assign} />}
       </main>
 
       {confirm && (
@@ -385,7 +385,7 @@ function TeachersView({ slots, teachers }: { slots: Slot[]; teachers: Teacher[] 
   );
 }
 
-function Finder({ slots, teachers, onAssign }: { slots: Slot[]; teachers: Teacher[]; onAssign: (date: string, day: Day, p: number, m: string, c: Candidate, r: string) => void }) {
+function Finder({ slots, teachers, subs, onAssign }: { slots: Slot[]; teachers: Teacher[]; subs: Substitution[]; onAssign: (date: string, day: Day, p: number, m: string, c: Candidate, r: string) => void }) {
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const autoDay = dayFromDate(date);
   const isSaturday = !autoDay;
@@ -395,6 +395,8 @@ function Finder({ slots, teachers, onAssign }: { slots: Slot[]; teachers: Teache
   const [periods, setPeriods] = useState<number[]>([]);
   const [reason, setReason] = useState("מחלה");
   const [run, setRun] = useState(false);
+  const [absent, setAbsent] = useState<string[]>([]);
+  const busy = useMemo(() => busyOnDate(subs, date, [...absent, missing]), [subs, date, absent, missing]);
   const mt = teachers.find((t) => t.id === missing);
   if (!mt) return <p className="text-muted-foreground">לא נמצאו מורים במערכת.</p>;
   const toggle = (p: number) => setPeriods((x) => x.includes(p) ? x.filter((y) => y !== p) : [...x, p].sort());
@@ -402,8 +404,8 @@ function Finder({ slots, teachers, onAssign }: { slots: Slot[]; teachers: Teache
 
   const [done, setDone] = useState<number[]>([]);
   const list = mode === "day" ? teachPs.filter((p) => !done.includes(p)) : periods;
-  const results = useMemo(() => run ? list.map((p) => ({ p, slot: slots.find((s) => s.teacher_id === missing && s.day_of_week === day && s.period === p), cands: findSubstitutes(teachers, slots, missing, day, p, date) })) : [], [run, list.join(","), slots, missing, day, teachers, date]);
-  const dayResults = useMemo(() => run && mode === "day" ? findWholeDaySubstitutes(teachers, slots, missing, day, date) : [], [run, mode, slots, missing, day, teachers, date]);
+  const results = useMemo(() => run ? list.map((p) => ({ p, slot: slots.find((s) => s.teacher_id === missing && s.day_of_week === day && s.period === p), cands: findSubstitutes(teachers, slots, missing, day, p, date, busy) })) : [], [run, list.join(","), slots, missing, day, teachers, date, busy]);
+  const dayResults = useMemo(() => run && mode === "day" ? findWholeDaySubstitutes(teachers, slots, missing, day, date, busy) : [], [run, mode, slots, missing, day, teachers, date, busy]);
 
   const statusLabel = (c: Candidate) => {
     const sts = c.statuses ?? [c.status];
@@ -421,6 +423,19 @@ function Finder({ slots, teachers, onAssign }: { slots: Slot[]; teachers: Teache
             {teachers.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</select></Field>
           <Field label="סיבה"><select className="input" value={reason} onChange={(e) => setReason(e.target.value)}>
             {["מחלה", "השתלמות", "מילואים", "סיור / טיול", "אירוע משפחתי", "אחר"].map((r) => <option key={r}>{r}</option>)}</select></Field>
+        </div>
+        <div className="mt-4">
+          <div className="mb-1 text-sm font-medium">מורים נוספים שחסרים בתאריך זה <span className="text-xs font-normal text-muted-foreground">(לא יוצעו כממלאי מקום)</span></div>
+          <div className="flex flex-wrap items-center gap-2">
+            {absent.map((id) => <span key={id} className="inline-flex items-center gap-1 rounded-full border bg-destructive/10 px-2 py-0.5 text-xs text-destructive">
+              {teachers.find((t) => t.id === id)?.name}
+              <button aria-label="הסר" onClick={() => setAbsent((a) => a.filter((x) => x !== id))}>×</button></span>)}
+            <select className="input max-w-56" value="" onChange={(e) => { if (e.target.value) setAbsent((a) => [...a, e.target.value]); }}>
+              <option value="">+ הוסף מורה חסר/ה</option>
+              {teachers.filter((t) => t.id !== missing && !absent.includes(t.id)).map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+            </select>
+          </div>
+          {subs.some((x) => x.date === date && x.status !== "בוטל") && <p className="mt-1 text-xs text-muted-foreground">מורים שכבר הוחלפו בתאריך זה, וממלאי מקום שכבר שובצו בשעה מסוימת, לא יוצעו שוב באותה שעה.</p>}
         </div>
         {!isSaturday && !mt.working_days.includes(day) && <p className="mt-3 text-sm text-destructive">{mt.name} אינו/ה עובד/ת ביום {DAY_HE[day]}.</p>}
         <div className="mt-4 flex flex-wrap items-center gap-2">
