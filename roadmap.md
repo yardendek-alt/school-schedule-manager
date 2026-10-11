@@ -1,0 +1,3 @@
+- [x] Show each substitute's original activity and names-only missing-teacher footer.
+- [x] Restrict replacement selection to teaching periods in both modes.
+- [x] Verify matching tests and the visible finder/form.

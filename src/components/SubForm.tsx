@@ -1,6 +1,6 @@
 import { Printer } from "lucide-react";
-import { DAY_HE, type Day, type Substitution, type Teacher } from "@/lib/school";
-import { classroomAssignments, normalizeClassroom as norm } from "@/lib/sub-form";
+import { DAY_HE, type Day, type Slot, type Substitution, type Teacher } from "@/lib/school";
+import { classroomAssignments, normalizeClassroom as norm, substituteOriginalActivity } from "@/lib/sub-form";
 
 // Columns follow the school's printed "מ"מ מורות" form (class + homeroom teacher)
 const CLASSES = [
@@ -10,11 +10,15 @@ const CLASSES = [
 ] as const;
 const LEAD_UNTIL = 13; // first 13 classes have "מובילה" in hours 8–10
 
-export function SubForm({ date, day, subs, teachers }: { date: string; day: Day; subs: Substitution[]; teachers: Teacher[] }) {
+export function SubForm({ date, day, subs, teachers, baseSlots }: { date: string; day: Day; subs: Substitution[]; teachers: Teacher[]; baseSlots: Slot[] }) {
   const name = (id: string) => teachers.find((t) => t.id === id)?.name ?? "";
+  const replacementLabel = (sub: Substitution) => {
+    const activity = substituteOriginalActivity(sub, baseSlots);
+    return `${name(sub.substitute_teacher_id)}${activity ? ` — ${activity}` : ""}`;
+  };
   const list = subs.filter((s) => s.date === date && s.status !== "בוטל");
   const cell = (cls: string, p: number) =>
-    classroomAssignments(list, date, cls, p).map((s) => name(s.substitute_teacher_id)).join(", ");
+    classroomAssignments(list, date, cls, p).map(replacementLabel).join(", ");
   const noClass = list.filter((s) => !CLASSES.some(([c]) => norm(c) === norm(s.class_room)));
   const missing = Array.from(new Set(list.map((s) => s.original_teacher_id)));
   const [y, m, d] = date.split("-");
@@ -59,10 +63,7 @@ export function SubForm({ date, day, subs, teachers }: { date: string; day: Day;
             <tr>
               <td colSpan={CLASSES.length + 1} className="border border-foreground/60 p-2 text-right text-sm">
                 <span className="font-bold">צוות הוראה חסר: </span>
-                {missing.map((id) => {
-                  const ps = list.filter((s) => s.original_teacher_id === id).map((s) => s.period).sort((a, b) => a - b);
-                  return <span key={id} className="ml-3">{name(id)} (שיעורים {ps.join(", ")})</span>;
-                })}
+                {missing.map((id) => <span key={id} className="ml-3">{name(id)}</span>)}
               </td>
             </tr>
           </tbody>
@@ -70,7 +71,7 @@ export function SubForm({ date, day, subs, teachers }: { date: string; day: Day;
       </div>
       {noClass.length > 0 && (
         <div className="mt-2 text-xs text-muted-foreground">
-          שיבוצים ללא כיתה בטופס: {noClass.map((s) => `${name(s.substitute_teacher_id)} במקום ${name(s.original_teacher_id)} (שיעור ${s.period}${s.class_room ? `, ${s.class_room}` : ""})`).join(" · ")}
+          שיבוצים ללא כיתה בטופס: {noClass.map((s) => `${replacementLabel(s)} במקום ${name(s.original_teacher_id)} (שיעור ${s.period}${s.class_room ? `, ${s.class_room}` : ""})`).join(" · ")}
         </div>
       )}
     </div>
