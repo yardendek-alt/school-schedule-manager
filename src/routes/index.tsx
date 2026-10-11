@@ -89,7 +89,7 @@ function App() {
             <div className="rounded-lg bg-primary p-2 text-primary-foreground"><School className="h-5 w-5" /></div>
             <div>
               <div className="font-bold leading-tight">מערכת שעות</div>
-              <div className="text-xs text-muted-foreground">חטיבת ביניים "אופקים"</div>
+              <div className="text-xs text-muted-foreground">בית ספר עידוד</div>
             </div>
           </div>
           <nav className="flex flex-wrap gap-1 md:ms-6">
