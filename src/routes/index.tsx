@@ -8,7 +8,7 @@ import {
   TEACHERS, DAYS, DAY_HE, PERIODS, findSubstitutes, findWholeDaySubstitutes, teachingPeriods, weeklyHours, dayFromDate,
   type Activity, type Day, type Slot, type Substitution, type Teacher, type Candidate,
 } from "@/lib/school";
-import { loadAll, saveSub, saveStatus, applySub } from "@/lib/school-db";
+import { loadAll, saveSub, saveStatus, applySub, saveAway } from "@/lib/school-db";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -331,6 +331,33 @@ function Field({ label, children }: any) {
   return <label className="flex min-w-44 flex-col gap-1 text-sm"><span className="text-muted-foreground">{label}</span>{children}</label>;
 }
 
+function Availability({ t }: { t: Teacher }) {
+  const [, force] = useState(0);
+  const [editing, setEditing] = useState(false);
+  const [until, setUntil] = useState(t.away_until ?? "");
+  const [reason, setReason] = useState(t.away_reason || "חופשת לידה");
+  const today = new Date().toISOString().slice(0, 10);
+  if (t.no_substitute) return <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">הנהלה — לא ממלא/ת מקום</span>;
+  const save = async (u: string | null, r: string) => {
+    try { await saveAway(t.id, u, r); t.away_until = u; t.away_reason = r; setEditing(false); force((x) => x + 1); toast.success(u ? "נשמר" : "המורה חזר/ה לרשימת ממלאי המקום"); }
+    catch { toast.error("השמירה נכשלה"); }
+  };
+  if (editing) return (
+    <div className="flex flex-wrap items-center gap-1">
+      <input className="w-28 rounded border bg-background px-1 py-0.5 text-xs" value={reason} onChange={(e) => setReason(e.target.value)} placeholder="סיבה" />
+      <input type="date" min={today} className="rounded border bg-background px-1 py-0.5 text-xs" value={until} onChange={(e) => setUntil(e.target.value)} />
+      <button disabled={!until} onClick={() => save(until, reason)} className="rounded bg-primary px-2 py-0.5 text-xs text-primary-foreground disabled:opacity-50">שמור</button>
+      <button onClick={() => setEditing(false)} className="rounded border px-2 py-0.5 text-xs">ביטול</button>
+    </div>);
+  if (t.away_until && t.away_until >= today) return (
+    <div className="flex flex-wrap items-center gap-1">
+      <span className="rounded-full bg-destructive/15 px-2 py-0.5 text-xs text-destructive">לא זמין/ה עד {t.away_until.split("-").reverse().join("/")}{t.away_reason ? ` (${t.away_reason})` : ""}</span>
+      <button onClick={() => setEditing(true)} className="text-xs underline">עריכה</button>
+      <button onClick={() => save(null, "")} className="text-xs underline">החזר</button>
+    </div>);
+  return <button onClick={() => setEditing(true)} className="rounded border px-2 py-0.5 text-xs hover:bg-muted">סמן היעדרות זמנית</button>;
+}
+
 function TeachersView({ slots, teachers }: { slots: Slot[]; teachers: Teacher[] }) {
   return (
     <div className="space-y-4">
@@ -338,7 +365,7 @@ function TeachersView({ slots, teachers }: { slots: Slot[]; teachers: Teacher[] 
       <div className="overflow-x-auto rounded-xl border bg-card">
         <table className="w-full text-sm">
           <thead className="bg-muted text-muted-foreground"><tr className="text-right">
-            <th className="p-3">שם</th><th className="p-3">טלפון</th><th className="p-3">מקצועות</th><th className="p-3">ימי עבודה</th><th className="p-3">שעות שבועיות</th>
+            <th className="p-3">שם</th><th className="p-3">טלפון</th><th className="p-3">מקצועות</th><th className="p-3">ימי עבודה</th><th className="p-3">שעות שבועיות</th><th className="p-3">זמינות למילוי מקום</th>
           </tr></thead>
           <tbody>{teachers.map((t) => {
             const h = weeklyHours(slots, t.id); const pct = Math.min(100, (h / t.max_weekly_hours) * 100);
@@ -349,6 +376,7 @@ function TeachersView({ slots, teachers }: { slots: Slot[]; teachers: Teacher[] 
                 <td className="p-3"><div className="flex flex-wrap gap-1">{t.subjects.map((s) => <span key={s} className={`rounded-full border px-2 py-0.5 text-xs ${BADGE["הוראה"]}`}>{s}</span>)}</div></td>
                 <td className="p-3"><div className="flex flex-wrap gap-1">{DAYS.map((d) => <span key={d} className={`rounded px-1.5 py-0.5 text-xs ${t.working_days.includes(d) ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground line-through"}`}>{DAY_HE[d].charAt(0)}'</span>)}</div></td>
                 <td className="p-3 min-w-40"><div className="flex items-center gap-2"><div className="h-2 flex-1 rounded-full bg-muted"><div className={`h-2 rounded-full ${h >= t.max_weekly_hours ? "bg-destructive" : "bg-primary"}`} style={{ width: `${pct}%` }} /></div><span className="text-xs">{h}/{t.max_weekly_hours}</span></div></td>
+                <td className="p-3 min-w-56"><Availability t={t} /></td>
               </tr>);
           })}</tbody>
         </table>
@@ -374,8 +402,8 @@ function Finder({ slots, teachers, onAssign }: { slots: Slot[]; teachers: Teache
 
   const [done, setDone] = useState<number[]>([]);
   const list = mode === "day" ? teachPs.filter((p) => !done.includes(p)) : periods;
-  const results = useMemo(() => run ? list.map((p) => ({ p, slot: slots.find((s) => s.teacher_id === missing && s.day_of_week === day && s.period === p), cands: findSubstitutes(teachers, slots, missing, day, p) })) : [], [run, list.join(","), slots, missing, day, teachers]);
-  const dayResults = useMemo(() => run && mode === "day" ? findWholeDaySubstitutes(teachers, slots, missing, day) : [], [run, mode, slots, missing, day, teachers]);
+  const results = useMemo(() => run ? list.map((p) => ({ p, slot: slots.find((s) => s.teacher_id === missing && s.day_of_week === day && s.period === p), cands: findSubstitutes(teachers, slots, missing, day, p, date) })) : [], [run, list.join(","), slots, missing, day, teachers, date]);
+  const dayResults = useMemo(() => run && mode === "day" ? findWholeDaySubstitutes(teachers, slots, missing, day, date) : [], [run, mode, slots, missing, day, teachers, date]);
 
   const statusLabel = (c: Candidate) => {
     const sts = c.statuses ?? [c.status];
