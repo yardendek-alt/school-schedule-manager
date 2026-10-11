@@ -1,4 +1,4 @@
-- [ ] Plan all absent teachers and hours before matching.
-- [ ] Process teachers sequentially with editable, visible selections and completion marks.
-- [ ] Save selections and changes without double bookings; show final daily form.
-- [ ] Verify workflow and conflict tests.
+- [x] Plan all absent teachers and hours before matching.
+- [x] Process teachers sequentially with editable, visible selections and completion marks.
+- [x] Save selections and changes without double bookings; show final daily form.
+- [x] Verify workflow and conflict tests.
