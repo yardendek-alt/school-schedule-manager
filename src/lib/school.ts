@@ -33,12 +33,13 @@ export function canSubstitute(t: Teacher, date?: string): boolean {
   return true;
 }
 
-// Teachers unavailable on a date: absent teachers (whole day) and substitutes already booked at a period.
+// Teachers unavailable on a date: manually-marked absent teachers (whole day),
+// covered teachers only at the periods they were covered, and substitutes already booked at a period.
 // Keys: "<id>" = absent all day, "<id>@<period>" = busy at that period.
 export function busyOnDate(subs: Substitution[], date: string, absent: string[] = []): Set<string> {
   const b = new Set<string>(absent);
   subs.filter((x) => x.date === date && x.status !== "בוטל").forEach((x) => {
-    b.add(x.original_teacher_id);
+    b.add(`${x.original_teacher_id}@${x.period}`);
     b.add(`${x.substitute_teacher_id}@${x.period}`);
   });
   return b;

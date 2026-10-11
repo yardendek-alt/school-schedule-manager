@@ -81,3 +81,10 @@ describe("multiple absences on the same date", () => {
   it("booking on another date does not block", () =>
     expect(findSubstitutes(teachers, slots, "m", "Sunday", 3, "2026-10-12", busyOnDate([sub], "2026-10-12")).map((r) => r.teacher.id).sort()).toEqual(["a", "b", "n"]));
 });
+
+describe("covered teacher only busy at covered hours", () => {
+  const sub = { id: "1", date: "2026-10-11", day: "Sunday" as const, period: 3, original_teacher_id: "x", substitute_teacher_id: "a", reason: "", status: "אושר" as const };
+  const b = busyOnDate([sub], "2026-10-11");
+  it("busy at hour 3", () => expect(b.has("x@3")).toBe(true));
+  it("not busy all day", () => expect(b.has("x")).toBe(false));
+});
