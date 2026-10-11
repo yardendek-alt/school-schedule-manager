@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { findSubstitutes, findWholeDaySubstitutes, teachingPeriods, dayFromDate, type Teacher, type Slot } from "@/lib/school";
+import { busyOnDate, findSubstitutes, findWholeDaySubstitutes, teachingPeriods, dayFromDate, type Teacher, type Slot } from "@/lib/school";
 
 const T = (id: string): Teacher => ({ id, name: id, phone: "", subjects: [], max_weekly_hours: 36, working_days: ["Sunday"] });
 
@@ -65,4 +65,19 @@ describe("availability", () => {
     expect(findSubstitutes(teachers, slots, "m", "Sunday", 1, "2026-10-18").map((r) => r.teacher.id)).toEqual(["c"]));
   it("away teacher returns after the date", () =>
     expect(findSubstitutes(teachers, slots, "m", "Sunday", 1, "2026-10-25").map((r) => r.teacher.id).sort()).toEqual(["b", "c"]));
+});
+
+describe("multiple absences on the same date", () => {
+  const teachers = ["m", "n", "a", "b"].map(T);
+  const slots: Slot[] = [
+    { day_of_week: "Sunday", period: 3, teacher_id: "m", activity_type: "הוראה" },
+    { day_of_week: "Sunday", period: 3, teacher_id: "n", activity_type: "שהייה" },
+    { day_of_week: "Sunday", period: 3, teacher_id: "a", activity_type: "שהייה" },
+    { day_of_week: "Sunday", period: 3, teacher_id: "b", activity_type: "פרטני" },
+  ];
+  const sub = { id: "1", date: "2026-10-11", day: "Sunday" as const, period: 3, original_teacher_id: "x", substitute_teacher_id: "a", reason: "", status: "אושר" as const };
+  it("absent teachers and already-booked substitutes are not offered", () =>
+    expect(findSubstitutes(teachers, slots, "m", "Sunday", 3, "2026-10-11", busyOnDate([sub], "2026-10-11", ["n"])).map((r) => r.teacher.id)).toEqual(["b"]));
+  it("booking on another date does not block", () =>
+    expect(findSubstitutes(teachers, slots, "m", "Sunday", 3, "2026-10-12", busyOnDate([sub], "2026-10-12")).map((r) => r.teacher.id).sort()).toEqual(["a", "b", "n"]));
 });

@@ -33,14 +33,26 @@ export function canSubstitute(t: Teacher, date?: string): boolean {
   return true;
 }
 
+// Teachers unavailable on a date: absent teachers (whole day) and substitutes already booked at a period.
+// Keys: "<id>" = absent all day, "<id>@<period>" = busy at that period.
+export function busyOnDate(subs: Substitution[], date: string, absent: string[] = []): Set<string> {
+  const b = new Set<string>(absent);
+  subs.filter((x) => x.date === date && x.status !== "בוטל").forEach((x) => {
+    b.add(x.original_teacher_id);
+    b.add(`${x.substitute_teacher_id}@${x.period}`);
+  });
+  return b;
+}
+const isBusy = (busy: Set<string> | undefined, id: string, p: number) => !!busy && (busy.has(id) || busy.has(`${id}@${p}`));
+
 export interface Candidate {
   teacher: Teacher; status: Activity; statuses?: Activity[]; subjectMatch: boolean; hours: number; underMax: boolean; score: number;
 }
 
 // Only teachers who are in שהייה or פרטני at that exact period can substitute; any teacher can cover any lesson.
-export function findSubstitutes(teachers: Teacher[], slots: Slot[], missingId: string, day: Day, period: number, date?: string): Candidate[] {
+export function findSubstitutes(teachers: Teacher[], slots: Slot[], missingId: string, day: Day, period: number, date?: string, busy?: Set<string>): Candidate[] {
   return teachers
-    .filter((t) => t.id !== missingId && canSubstitute(t, date))
+    .filter((t) => t.id !== missingId && canSubstitute(t, date) && !isBusy(busy, t.id, period))
     .map((t) => ({ t, s: slots.find((x) => x.teacher_id === t.id && x.day_of_week === day && x.period === period) }))
     .filter(({ s }) => s && !s.substitute_for && (s.activity_type === "שהייה" || s.activity_type === "פרטני"))
     .map(({ t, s }) => {
@@ -62,11 +74,11 @@ export function teachingPeriods(slots: Slot[], teacherId: string, day: Day): num
 }
 
 // ממלאי מקום שפנויים (שהייה/פרטני) בכל השעות שבהן המורה החסר/ה מלמד/ת באותו יום
-export function findWholeDaySubstitutes(teachers: Teacher[], slots: Slot[], missingId: string, day: Day, date?: string): Candidate[] {
+export function findWholeDaySubstitutes(teachers: Teacher[], slots: Slot[], missingId: string, day: Day, date?: string, busy?: Set<string>): Candidate[] {
   const ps = teachingPeriods(slots, missingId, day);
   if (!ps.length) return [];
   return teachers
-    .filter((t) => t.id !== missingId && canSubstitute(t, date))
+    .filter((t) => t.id !== missingId && canSubstitute(t, date) && !ps.some((p) => isBusy(busy, t.id, p)))
     .map((t): Candidate | null => {
       const cells = ps.map((p) => ({ p, s: slots.find((x) => x.teacher_id === t.id && x.day_of_week === day && x.period === p) }));
       const ok = cells.every(({ s }) => s && !s.substitute_for && (s.activity_type === "שהייה" || s.activity_type === "פרטני"));
