@@ -372,7 +372,9 @@ function Finder({ slots, teachers, onAssign }: { slots: Slot[]; teachers: Teache
   const toggle = (p: number) => setPeriods((x) => x.includes(p) ? x.filter((y) => y !== p) : [...x, p].sort());
   const teachPs = teachingPeriods(slots, missing, day);
 
-  const results = useMemo(() => run && mode === "hours" ? periods.map((p) => ({ p, slot: slots.find((s) => s.teacher_id === missing && s.day_of_week === day && s.period === p), cands: findSubstitutes(teachers, slots, missing, day, p) })) : [], [run, mode, periods, slots, missing, day, teachers]);
+  const [done, setDone] = useState<number[]>([]);
+  const list = mode === "day" ? teachPs.filter((p) => !done.includes(p)) : periods;
+  const results = useMemo(() => run ? list.map((p) => ({ p, slot: slots.find((s) => s.teacher_id === missing && s.day_of_week === day && s.period === p), cands: findSubstitutes(teachers, slots, missing, day, p) })) : [], [run, list.join(","), slots, missing, day, teachers]);
   const dayResults = useMemo(() => run && mode === "day" ? findWholeDaySubstitutes(teachers, slots, missing, day) : [], [run, mode, slots, missing, day, teachers]);
 
   const statusLabel = (c: Candidate) => {
@@ -419,18 +421,18 @@ function Finder({ slots, teachers, onAssign }: { slots: Slot[]; teachers: Teache
         </>}
         {mode === "day" && <p className="mt-3 text-sm text-muted-foreground">
           {teachPs.length
-            ? <>מציג ממלאי מקום שפנויים (בשהייה או בפרטני) בכל {teachPs.length} השעות שבהן {mt.name} מלמד/ת ביום {DAY_HE[day]}: שעות {teachPs.join(", ")}.</>
+            ? <>מציג אפשרויות מילוי לכל אחת מ-{teachPs.length} השעות שבהן {mt.name} מלמד/ת ביום {DAY_HE[day]}: שעות {teachPs.join(", ")}.</>
             : <>ל{mt.name} אין שיעורים ביום {DAY_HE[day]} — אין צורך במילוי מקום.</>}
         </p>}
-        <button className="btn-primary mt-4" disabled={isSaturday || (mode === "hours" ? !periods.length : !teachPs.length)} onClick={() => setRun(true)}>
+        <button className="btn-primary mt-4" disabled={isSaturday || (mode === "hours" ? !periods.length : !teachPs.length)} onClick={() => { setDone([]); setRun(true); }}>
           <UserSearch className="h-4 w-4" />{mode === "day" ? "חפש ממלאי מקום ליום שלם" : "חפש ממלאי מקום"}
         </button>
       </Card>
 
-      {mode === "day" && run && (
-        <Card title={`יום שלם — יום ${DAY_HE[day]} (${date})`} icon={Users}
+      {mode === "day" && run && dayResults.length > 0 && done.length === 0 && (
+        <Card title={`ממלא אחד לכל היום — יום ${DAY_HE[day]} (${date})`} icon={Users}
           action={<span className="text-xs text-muted-foreground">{dayResults.length} מועמדים</span>}>
-          {dayResults.length === 0 ? <p className="text-muted-foreground">אין מורה שפנוי בשהייה או בפרטני בכל השעות הנדרשות. נסו את המצב "לפי שעות" לשיבוץ ממלאים שונים לשעות שונות.</p> : (
+          {(
             <div className="space-y-2">{dayResults.map((c, i) => (
               <div key={c.teacher.id} className={`flex flex-wrap items-center gap-3 rounded-lg border p-3 ${i === 0 ? "border-primary bg-primary/5" : ""}`}>
                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-sm font-bold">{i + 1}</div>
@@ -440,13 +442,15 @@ function Finder({ slots, teachers, onAssign }: { slots: Slot[]; teachers: Teache
                 <span className={`rounded-full border px-2 py-0.5 text-xs ${BADGE[c.status]}`}>{statusLabel(c)} בכל השעות</span>
                 <span className={`rounded-full px-2 py-0.5 text-xs ${c.underMax ? "bg-muted text-muted-foreground" : "bg-destructive/15 text-destructive"}`}>{c.hours}/{c.teacher.max_weekly_hours} ש"ש</span>
                 <button className="btn-primary text-sm" onClick={() => {
-                  teachPs.forEach((p) => onAssign(date, day, p, missing, c, reason));
+                  teachPs.forEach((p) => onAssign(date, day, p, missing, c, reason)); setDone(teachPs);
                 }}>שבץ מורה זה לכל היום</button>
               </div>))}</div>)}
         </Card>
       )}
 
-      {mode === "hours" && results.map(({ p, slot, cands }) => (
+      {mode === "day" && run && results.length > 0 && <p className="text-sm text-muted-foreground">אפשרויות לכל שעה בנפרד — אפשר לשבץ ממלא שונה בכל שעה:</p>}
+      {mode === "day" && run && teachPs.length > 0 && results.length === 0 && <p className="text-sm font-medium text-primary">כל השעות של {mt.name} שובצו.</p>}
+      {results.map(({ p, slot, cands }) => (
         <Card key={p} title={`שעה ${p} — ${slot && slot.activity_type !== "חלון" ? (slot.subject ?? slot.activity_type) : "אין שיעור"}${slot?.class_room ? " · " + slot.class_room : ""}`} icon={Users}
           action={<span className="text-xs text-muted-foreground">{cands.length} מועמדים</span>}>
           {cands.length === 0 ? <p className="text-muted-foreground">אין מורים בשהייה או בפרטני בשעה זו.</p> : (
@@ -458,7 +462,7 @@ function Finder({ slots, teachers, onAssign }: { slots: Slot[]; teachers: Teache
                 </div>
                 <span className={`rounded-full border px-2 py-0.5 text-xs ${BADGE[c.status]}`}>{statusLabel(c)}</span>
                 <span className={`rounded-full px-2 py-0.5 text-xs ${c.underMax ? "bg-muted text-muted-foreground" : "bg-destructive/15 text-destructive"}`}>{c.hours}/{c.teacher.max_weekly_hours} ש"ש</span>
-                <button className="btn-primary text-sm" onClick={() => { onAssign(date, day, p, missing, c, reason); setPeriods((x) => x.filter((y) => y !== p)); }}>שבץ מורה זה כממלא מקום</button>
+                <button className="btn-primary text-sm" onClick={() => { onAssign(date, day, p, missing, c, reason); setPeriods((x) => x.filter((y) => y !== p)); setDone((x) => [...x, p]); }}>שבץ מורה זה כממלא מקום</button>
               </div>))}</div>)}
         </Card>
       ))}
