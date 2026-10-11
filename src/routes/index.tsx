@@ -274,7 +274,7 @@ function ScheduleView({ slots, teachers }: { slots: Slot[]; teachers: Teacher[] 
       <Card title={mode === "day" ? `יום ${DAY_HE[day as Day]}` : `מערכת של ${teachers.find((t) => t.id === tid)?.name}`} icon={CalendarDays}>
         {mode === "day"
           ? <Grid rows={filteredTeachers.map((t) => ({ label: t.name, cells: PERIODS.map((p) => ({ s: slots.find((s) => s.teacher_id === t.id && s.day_of_week === day && s.period === p), off: !t.working_days.includes(day as Day) })) }))} />
-          : <Grid rows={DAYS.map((d) => ({ label: DAY_HE[d], cells: PERIODS.map((p) => ({ s: slots.find((s) => s.teacher_id === tid && s.day_of_week === d && s.period === p), off: !teachers.find((t) => t.id === tid)?.working_days.includes(d) })) }))} />}
+          : <WeekGrid slots={slots} teacher={teachers.find((t) => t.id === tid)} />}
       </Card>
     </div>
   );
