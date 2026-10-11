@@ -212,7 +212,7 @@ function Stat({ label, value, badge }: { label: string; value: number; badge?: A
   );
 }
 
-function SlotCell({ s, off }: { s?: Slot | undefined; off?: boolean }) {
+function SlotCell({ s, off }: { s?: Slot | undefined; off?: boolean | undefined }) {
   if (off) return <div className="h-full min-h-14 rounded-md bg-muted/40" title="לא עובד/ת" />;
   if (!s || s.activity_type === "חלון") return <div className={`h-full min-h-14 rounded-md border border-dashed p-1.5 text-xs ${BADGE["חלון"]}`}>חלון</div>;
   return (
