@@ -5,3 +5,4 @@
 - [x] Limit daily form to chosen absences and mark uncovered classroom hours.
 - [x] Equalize daily-form cells and compact activity labels; color candidate activities.
 - [x] Verify updated form and rules.
+- [x] Drop bold from the מ"מ mark; use ש for שהייה and פ for פרטני in the form.

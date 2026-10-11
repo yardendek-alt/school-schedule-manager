@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { classroomAssignments, plannedFormData, substituteOriginalActivity } from "@/lib/sub-form";
+import { activityShortLabel, classroomAssignments, plannedFormData, substituteOriginalActivity } from "@/lib/sub-form";
 import type { Substitution } from "@/lib/school";
 
 const assignment: Substitution = {
@@ -27,6 +27,14 @@ describe("substitute's original activity", () => {
       { teacher_id: "yael", day_of_week: "Tuesday", period: 3, activity_type: "הוראה" },
       { teacher_id: "yael", day_of_week: "Monday", period: 3, activity_type },
     ])).toBe(activity_type);
+  });
+});
+
+describe("printed activity marks", () => {
+  it("shortens שהייה to ש and פרטני to פ", () => {
+    expect(activityShortLabel("שהייה")).toBe("ש");
+    expect(activityShortLabel("פרטני")).toBe("פ");
+    expect(activityShortLabel(undefined)).toBe("");
   });
 });
 

@@ -15,6 +15,11 @@ export function substituteOriginalActivity(sub: Substitution, baseSlots: Slot[])
   return activity === "שהייה" || activity === "פרטני" ? activity : undefined;
 }
 
+// Printed form uses single-letter marks: ש = שהייה, פ = פרטני
+export function activityShortLabel(activity?: "שהייה" | "פרטני"): string {
+  return activity === "פרטני" ? "פ" : activity === "שהייה" ? "ש" : "";
+}
+
 export function plannedFormData(plans: AbsencePlan[], baseSlots: Slot[], subs: Substitution[], date: string, day: Day) {
   const plannedSlots = plans.flatMap((plan) => {
     const periods = planPeriods(plan, baseSlots, day);
