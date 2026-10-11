@@ -21,10 +21,11 @@ export async function loadAll() {
   if (t.error || s.error || u.error) throw t.error ?? s.error ?? u.error;
   const teachers: Teacher[] = t.data.map((r) => ({ id: r.id, name: r.name, phone: r.phone, subjects: r.subjects, max_weekly_hours: r.max_weekly_hours, working_days: r.working_days as Day[], no_substitute: r.no_substitute, away_until: r.away_until, away_reason: r.away_reason }));
   setTeachers(teachers);
-  let slots: Slot[] = s.data.map((r) => ({ day_of_week: r.day_of_week as Day, period: r.period, teacher_id: r.teacher_id, activity_type: r.activity_type as Activity, subject: r.subject ?? undefined, class_room: r.class_room ?? undefined }));
+  const base: Slot[] = s.data.map((r) => ({ day_of_week: r.day_of_week as Day, period: r.period, teacher_id: r.teacher_id, activity_type: r.activity_type as Activity, subject: r.subject ?? undefined, class_room: r.class_room ?? undefined }));
+  let slots = base;
   const subs: Substitution[] = u.data.map((r) => ({ id: r.id, date: r.date, day: r.day_of_week as Day, period: r.period, original_teacher_id: r.original_teacher_id, substitute_teacher_id: r.substitute_teacher_id, reason: r.reason, status: r.status as Substitution["status"], subject: r.subject ?? undefined, class_room: r.class_room ?? undefined }));
   [...subs].reverse().forEach((x) => { slots = applySub(slots, x); });
-  return { teachers, slots, subs };
+  return { teachers, slots, base, subs };
 }
 
 export async function saveSub(s: Substitution) {
