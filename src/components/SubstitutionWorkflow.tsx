@@ -113,7 +113,7 @@ export function SubstitutionWorkflow({ slots, teachers, subs, onSave }: Props) {
             {candidates.map((candidate) => {
               const selected = choices[period] === candidate.teacher.id;
               return <div key={candidate.teacher.id} className={`flex min-w-0 flex-wrap items-center justify-between gap-3 rounded-lg border p-3 ${selected ? "border-success bg-success/10" : "bg-card"}`}>
-                <div className="min-w-0"><div className="font-semibold break-words">{candidate.teacher.name}</div><span className="text-xs text-muted-foreground">{candidate.status} · {candidate.hours}/{candidate.teacher.max_weekly_hours} ש״ש</span></div>
+                <div className="min-w-0"><div className="font-semibold break-words">{candidate.teacher.name}</div><div className="mt-1 flex flex-wrap items-center gap-2 text-xs"><span className={`rounded border px-1.5 py-0.5 ${candidate.status === "פרטני" ? "bg-indiv text-indiv-foreground border-indiv-border" : "bg-prep text-prep-foreground border-prep-border"}`}>{candidate.status}</span><span className="text-muted-foreground">{candidate.hours}/{candidate.teacher.max_weekly_hours} ש״ש</span></div></div>
                 <Button size="sm" variant={selected ? "secondary" : "outline"} disabled={saving} aria-pressed={selected} aria-label={`${selected ? "ביטול בחירת" : "בחירת"} ${candidate.teacher.name} לשעה ${period}`} onClick={() => setChoices((prev) => { const next = { ...prev }; if (selected) delete next[period]; else next[period] = candidate.teacher.id; return next; })}>
                   {selected ? <Check /> : <Plus />}{selected ? "נבחר/ה" : "בחירה"}
                 </Button>
@@ -135,7 +135,7 @@ export function SubstitutionWorkflow({ slots, teachers, subs, onSave }: Props) {
           const remaining = ps.filter((p) => !selected[p]);
           return remaining.length ? <p key={plan.teacherId} className="text-sm text-destructive">{name(plan.teacherId)} — ללא מחליף בשעות {remaining.join(", ")}</p> : null;
         })}
-        <SubForm date={date} day={day} subs={subs} teachers={teachers} baseSlots={slots} />
+        <SubForm date={date} day={day} subs={subs} teachers={teachers} baseSlots={slots} plans={plans} />
       </>}
     </>}
   </div>;

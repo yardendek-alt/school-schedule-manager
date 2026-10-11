@@ -1,6 +1,8 @@
 import { Printer } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { DAY_HE, type Day, type Slot, type Substitution, type Teacher } from "@/lib/school";
-import { classroomAssignments, normalizeClassroom as norm, substituteOriginalActivity } from "@/lib/sub-form";
+import { classroomAssignments, normalizeClassroom as norm, plannedFormData, substituteOriginalActivity } from "@/lib/sub-form";
+import type { AbsencePlan } from "@/lib/substitution-workflow";
 
 // Columns follow the school's printed "מ"מ מורות" form (class + homeroom teacher)
 const CLASSES = [
@@ -8,55 +10,50 @@ const CLASSES = [
   ["ג'3", "גלית"], ["ד'1", "רות"], ["ד'2", "ימית קינדה"], ["ה'1", "אוקסנה"], ["ה'2", "טל"], ["ה'3", "זוהרה"],
   ["ו'1", "איילת"], ["ט'1", "אסתי"], ['י"ב1', "דורית"],
 ] as const;
-const LEAD_UNTIL = 13; // first 13 classes have "מובילה" in hours 8–10
+const LEAD_UNTIL = 13; // Keep fixed lead labels in hours 8–10 without merging cells.
 
-export function SubForm({ date, day, subs, teachers, baseSlots }: { date: string; day: Day; subs: Substitution[]; teachers: Teacher[]; baseSlots: Slot[] }) {
+export function SubForm({ date, day, subs, teachers, baseSlots, plans }: { date: string; day: Day; subs: Substitution[]; teachers: Teacher[]; baseSlots: Slot[]; plans: AbsencePlan[] }) {
   const name = (id: string) => teachers.find((t) => t.id === id)?.name ?? "";
   const replacementLabel = (sub: Substitution) => {
     const activity = substituteOriginalActivity(sub, baseSlots);
-    return `${name(sub.substitute_teacher_id)}${activity ? ` — ${activity}` : ""}`;
+    return `${name(sub.substitute_teacher_id)}${activity ? ` (${activity === "פרטני" ? "מ" : "ש"})` : ""}`;
   };
-  const list = subs.filter((s) => s.date === date && s.status !== "בוטל");
-  const cell = (cls: string, p: number) =>
-    classroomAssignments(list, date, cls, p).map(replacementLabel).join(", ");
+  const { assignments: list, uncovered, missingTeacherIds: missing } = plannedFormData(plans, baseSlots, subs, date, day);
   const noClass = list.filter((s) => !CLASSES.some(([c]) => norm(c) === norm(s.class_room)));
-  const missing = Array.from(new Set(list.map((s) => s.original_teacher_id)));
   const [y, m, d] = date.split("-");
 
   return (
     <div className="rounded-xl border bg-card p-4 print-area">
       <div className="mb-3 flex items-center justify-between no-print">
         <h2 className="text-lg font-bold">טופס מ"מ מורות</h2>
-        <button className="btn-primary flex items-center gap-1 text-sm" onClick={() => window.print()}><Printer className="h-4 w-4" />הדפס</button>
+        <Button size="sm" onClick={() => window.print()}><Printer className="h-4 w-4" />הדפס</Button>
       </div>
       <div className="mb-3 text-center">
         <div className="text-lg font-bold underline">צוות הוראה</div>
         <div className="mt-1 font-semibold">יום: {DAY_HE[day]} &nbsp;&nbsp; תאריך: {d}/{m}/{y}</div>
       </div>
       <div className="overflow-x-auto">
-        <table className="w-full border-collapse text-center text-xs">
+        <table className="sub-form-table w-full min-w-[1040px] table-fixed border-collapse text-center text-xs print:min-w-0">
           <thead>
             <tr>
-              <th className="border border-foreground/60 p-1">תשפ"ז</th>
-              {CLASSES.map(([c, t]) => <th key={c} className="border border-foreground/60 p-1"><div>{c}</div><div>{t}</div></th>)}
+              <th className="border border-foreground/60 p-0"><div className="sub-form-cell flex items-center justify-center">תשפ"ז</div></th>
+              {CLASSES.map(([c, t]) => <th key={c} className="border border-foreground/60 p-0"><div className="sub-form-cell flex flex-col justify-center"><div>{c}</div><div>{t}</div></div></th>)}
             </tr>
           </thead>
           <tbody>
             {Array.from({ length: 10 }, (_, i) => i + 1).map((p) => (
               <tr key={p}>
-                <th className="whitespace-nowrap border border-foreground/60 p-1">שיעור {p}</th>
+                <th className="whitespace-nowrap border border-foreground/60 p-0"><div className="sub-form-cell flex items-center justify-center">שיעור {p}</div></th>
                 {CLASSES.map(([c], ci) => {
-                  if (p >= 8 && ci < LEAD_UNTIL) {
-                    if (p > 8) return null;
-                    return <td key={c} rowSpan={3} className="border border-foreground/60 p-1">
-                      <div>{c === "ד'1" ? "מוביל" : "מובילה"}</div>
-                      {[8, 9, 10].map((q) => {
-                        const replacement = cell(c, q);
-                        return replacement ? <div key={q} className="mt-1 font-semibold text-primary">שיעור {q}: {replacement}</div> : null;
-                      })}
-                    </td>;
-                  }
-                  return <td key={c} className="h-7 border border-foreground/60 p-1 font-semibold text-primary">{cell(c, p)}</td>;
+                  const replacements = classroomAssignments(list, date, c, p);
+                  const needsSubstitute = uncovered.some((slot) => slot.period === p && norm(slot.class_room) === norm(c));
+                  return <td key={c} className="border border-foreground/60 p-0" aria-label={`${c} שיעור ${p}`}>
+                    <div className="sub-form-cell flex flex-col items-center justify-center gap-0.5">
+                      {p >= 8 && ci < LEAD_UNTIL && <div>{c === "ד'1" ? "מוביל" : "מובילה"}</div>}
+                      {replacements.map((sub) => <div key={sub.id} className="w-full break-words font-semibold text-primary">{replacementLabel(sub)}</div>)}
+                      {needsSubstitute && <div className="text-base font-extrabold text-destructive">מ"מ</div>}
+                    </div>
+                  </td>;
                 })}
               </tr>
             ))}
@@ -69,9 +66,10 @@ export function SubForm({ date, day, subs, teachers, baseSlots }: { date: string
           </tbody>
         </table>
       </div>
-      {noClass.length > 0 && (
+      {(noClass.length > 0 || uncovered.some((slot) => !CLASSES.some(([c]) => norm(c) === norm(slot.class_room)))) && (
         <div className="mt-2 text-xs text-muted-foreground">
-          שיבוצים ללא כיתה בטופס: {noClass.map((s) => `${replacementLabel(s)} במקום ${name(s.original_teacher_id)} (שיעור ${s.period}${s.class_room ? `, ${s.class_room}` : ""})`).join(" · ")}
+          {noClass.length > 0 && <div>שיבוצים ללא כיתה בטופס: {noClass.map((s) => `${replacementLabel(s)} במקום ${name(s.original_teacher_id)} (שיעור ${s.period}${s.class_room ? `, ${s.class_room}` : ""})`).join(" · ")}</div>}
+          {uncovered.filter((slot) => !CLASSES.some(([c]) => norm(c) === norm(slot.class_room))).map((slot, i) => <div key={i} className="font-bold text-destructive">מ"מ — {name(slot.teacher_id)}, שיעור {slot.period}{slot.class_room ? `, ${slot.class_room}` : ""}</div>)}
         </div>
       )}
     </div>
