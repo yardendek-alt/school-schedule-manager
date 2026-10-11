@@ -14,7 +14,131 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      schedule_slots: {
+        Row: {
+          activity_type: string
+          class_room: string | null
+          day_of_week: string
+          id: string
+          period: number
+          subject: string | null
+          teacher_id: string
+        }
+        Insert: {
+          activity_type: string
+          class_room?: string | null
+          day_of_week: string
+          id?: string
+          period: number
+          subject?: string | null
+          teacher_id: string
+        }
+        Update: {
+          activity_type?: string
+          class_room?: string | null
+          day_of_week?: string
+          id?: string
+          period?: number
+          subject?: string | null
+          teacher_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "schedule_slots_teacher_id_fkey"
+            columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "teachers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      substitutions: {
+        Row: {
+          class_room: string | null
+          created_at: string
+          date: string
+          day_of_week: string
+          id: string
+          original_teacher_id: string
+          period: number
+          reason: string
+          status: string
+          subject: string | null
+          substitute_teacher_id: string
+        }
+        Insert: {
+          class_room?: string | null
+          created_at?: string
+          date: string
+          day_of_week: string
+          id?: string
+          original_teacher_id: string
+          period: number
+          reason?: string
+          status?: string
+          subject?: string | null
+          substitute_teacher_id: string
+        }
+        Update: {
+          class_room?: string | null
+          created_at?: string
+          date?: string
+          day_of_week?: string
+          id?: string
+          original_teacher_id?: string
+          period?: number
+          reason?: string
+          status?: string
+          subject?: string | null
+          substitute_teacher_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "substitutions_original_teacher_id_fkey"
+            columns: ["original_teacher_id"]
+            isOneToOne: false
+            referencedRelation: "teachers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "substitutions_substitute_teacher_id_fkey"
+            columns: ["substitute_teacher_id"]
+            isOneToOne: false
+            referencedRelation: "teachers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      teachers: {
+        Row: {
+          created_at: string
+          id: string
+          max_weekly_hours: number
+          name: string
+          phone: string
+          subjects: string[]
+          working_days: string[]
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          max_weekly_hours?: number
+          name: string
+          phone?: string
+          subjects?: string[]
+          working_days?: string[]
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          max_weekly_hours?: number
+          name?: string
+          phone?: string
+          subjects?: string[]
+          working_days?: string[]
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
