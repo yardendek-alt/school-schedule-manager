@@ -52,3 +52,17 @@ describe("dayFromDate", () => {
   it("Saturday has no school", () => expect(dayFromDate("2026-10-10")).toBeNull());
   it("Friday is a school day", () => expect(dayFromDate("2026-10-09")).toBe("Friday"));
 });
+
+describe("availability", () => {
+  const slots: Slot[] = [
+    { day_of_week: "Sunday", period: 1, teacher_id: "m", activity_type: "הוראה" },
+    { day_of_week: "Sunday", period: 1, teacher_id: "a", activity_type: "שהייה" },
+    { day_of_week: "Sunday", period: 1, teacher_id: "b", activity_type: "שהייה" },
+    { day_of_week: "Sunday", period: 1, teacher_id: "c", activity_type: "שהייה" },
+  ];
+  const teachers = [T("m"), { ...T("a"), no_substitute: true }, { ...T("b"), away_until: "2026-10-20" }, T("c")];
+  it("management and away teachers are excluded until the date", () =>
+    expect(findSubstitutes(teachers, slots, "m", "Sunday", 1, "2026-10-18").map((r) => r.teacher.id)).toEqual(["c"]));
+  it("away teacher returns after the date", () =>
+    expect(findSubstitutes(teachers, slots, "m", "Sunday", 1, "2026-10-25").map((r) => r.teacher.id).sort()).toEqual(["b", "c"]));
+});
