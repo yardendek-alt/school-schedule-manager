@@ -1,15 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
   LayoutDashboard, Users, CalendarDays, UserSearch, Phone, CheckCircle2, X, Send, MessageSquare, School, Bell, ClipboardList,
 } from "lucide-react";
 import {
-  TEACHERS, DAYS, DAY_HE, PERIODS, findSubstitutes, findWholeDaySubstitutes, busyOnDate, teachingPeriods, weeklyHours, dayFromDate,
-  type Activity, type Day, type Slot, type Substitution, type Teacher, type Candidate,
+  TEACHERS, DAYS, DAY_HE, PERIODS, findSubstitutes, weeklyHours,
+  type Activity, type Day, type Slot, type Substitution, type Teacher,
 } from "@/lib/school";
-import { loadAll, saveSub, saveStatus, applySub, saveAway } from "@/lib/school-db";
-import { SubForm } from "@/components/SubForm";
+import { loadAll, saveStatus, applySub, saveAway, saveWorkflowAssignments } from "@/lib/school-db";
+import { SubstitutionWorkflow } from "@/components/SubstitutionWorkflow";
+import { planPeriods, workflowBusy, type AbsencePlan } from "@/lib/substitution-workflow";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -62,17 +63,32 @@ function App() {
     });
   };
 
-  const assign = (date: string, day: Day, period: number, missingId: string, c: Candidate, reason: string) => {
-    const orig = base.find((s) => s.teacher_id === missingId && s.day_of_week === day && s.period === period);
-    if (orig?.activity_type !== "הוראה") return;
-    const sub: Substitution = {
-      id: crypto.randomUUID(), date, day, period, original_teacher_id: missingId, substitute_teacher_id: c.teacher.id,
-      reason, status: "ממתין לאישור", subject: orig?.subject, class_room: orig?.class_room,
-    };
-    setSlots((prev) => applySub(prev, sub));
-    setSubsState((p) => [sub, ...p]);
-    void saveSub(sub).catch(() => toast.error("שמירת השיבוץ נכשלה"));
-    setConfirm(sub);
+  const saveTeacherChoices = async (date: string, day: Day, plan: AbsencePlan, choices: Record<number, string>) => {
+    const periods = planPeriods(plan, base, day);
+    const existing = subs.filter((s) => s.date === date && s.original_teacher_id === plan.teacherId && s.status !== "בוטל" && periods.includes(s.period));
+    const changes: Substitution[] = [];
+    for (const period of periods) {
+      const previous = existing.filter((s) => s.period === period);
+      const substituteId = choices[period];
+      const orig = base.find((s) => s.teacher_id === plan.teacherId && s.day_of_week === day && s.period === period);
+      if (!substituteId) {
+        changes.push(...previous.map((s) => ({ ...s, status: "בוטל" as const })));
+        continue;
+      }
+      const occupied = workflowBusy(subs, date, [], plan, base, day);
+      const eligible = findSubstitutes(teachers, base, plan.teacherId, day, period, date, occupied);
+      if (!eligible.some((c) => c.teacher.id === substituteId)) throw new Error("Unavailable substitute");
+      const first = previous[0];
+      changes.push({ id: first?.id ?? crypto.randomUUID(), date, day, period,
+        original_teacher_id: plan.teacherId, substitute_teacher_id: substituteId,
+        reason: plan.reason, status: first?.substitute_teacher_id === substituteId ? first.status : "ממתין לאישור",
+        subject: orig?.subject, class_room: orig?.class_room });
+      changes.push(...previous.slice(1).map((s) => ({ ...s, status: "בוטל" as const })));
+    }
+    await saveWorkflowAssignments(changes);
+    const updated = [...changes, ...subs.filter((s) => !changes.some((c) => c.id === s.id))];
+    setSubsState(updated);
+    setSlots([...updated].reverse().reduce((schedule, sub) => applySub(schedule, sub), base));
   };
 
   if (!loaded) return <div dir="rtl" className="flex min-h-screen items-center justify-center text-muted-foreground">טוען נתונים…</div>;
@@ -110,7 +126,7 @@ function App() {
         {view === "dashboard" && <Dashboard slots={slots} subs={subs} tName={tName} setSubs={setSubs} onNotify={setNotify} goFinder={() => setView("finder")} />}
         {view === "schedule" && <ScheduleView slots={slots} teachers={teachers} />}
         {view === "teachers" && <TeachersView slots={slots} teachers={teachers} />}
-        {view === "finder" && <Finder slots={base} teachers={teachers} subs={subs} onAssign={assign} />}
+        {view === "finder" && <SubstitutionWorkflow slots={base} teachers={teachers} subs={subs} onSave={saveTeacherChoices} />}
       </main>
 
       {confirm && (
@@ -384,141 +400,6 @@ function TeachersView({ slots, teachers }: { slots: Slot[]; teachers: Teacher[] 
           })}</tbody>
         </table>
       </div>
-    </div>
-  );
-}
-
-function Finder({ slots, teachers, subs, onAssign }: { slots: Slot[]; teachers: Teacher[]; subs: Substitution[]; onAssign: (date: string, day: Day, p: number, m: string, c: Candidate, r: string) => void }) {
-  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
-  const autoDay = dayFromDate(date);
-  const isSaturday = !autoDay;
-  const day: Day = (autoDay ?? "Sunday") as Day;
-  const [missing, setMissing] = useState(teachers[0]?.id ?? "");
-  const [mode, setMode] = useState<"hours" | "day">("hours");
-  const [periods, setPeriods] = useState<number[]>([]);
-  const [reason, setReason] = useState("מחלה");
-  const [run, setRun] = useState(false);
-  const [absent, setAbsent] = useState<string[]>([]);
-  const busy = useMemo(() => busyOnDate(subs, date, [...absent, missing]), [subs, date, absent, missing]);
-  const mt = teachers.find((t) => t.id === missing);
-  const toggle = (p: number) => setPeriods((x) => x.includes(p) ? x.filter((y) => y !== p) : [...x, p].sort());
-  const teachPs = teachingPeriods(slots, missing, day);
-
-  const [done, setDone] = useState<number[]>([]);
-  const [showForm, setShowForm] = useState(false);
-  const selectedTeachingPeriods = periods.filter((p) => teachPs.includes(p));
-  const list = mode === "day" ? teachPs.filter((p) => !done.includes(p)) : selectedTeachingPeriods;
-  const results = useMemo(() => run ? list.map((p) => ({ p, slot: slots.find((s) => s.teacher_id === missing && s.day_of_week === day && s.period === p), cands: findSubstitutes(teachers, slots, missing, day, p, date, busy) })) : [], [run, list.join(","), slots, missing, day, teachers, date, busy]);
-  const dayResults = useMemo(() => run && mode === "day" ? findWholeDaySubstitutes(teachers, slots, missing, day, date, busy) : [], [run, mode, slots, missing, day, teachers, date, busy]);
-
-  if (!mt) return <p className="text-muted-foreground">לא נמצאו מורים במערכת.</p>;
-  const statusLabel = (c: Candidate) => {
-    const sts = c.statuses ?? [c.status];
-    return sts.map((s) => (s === "שהייה" ? "בשהייה" : "בפרטני")).join(" + ");
-  };
-
-  return (
-    <div className="space-y-4">
-      <h1 className="text-2xl font-bold">איתור ממלא מקום</h1>
-      <Card title="פרטי ההיעדרות" icon={UserSearch}>
-        <div className="flex flex-wrap gap-3">
-          <Field label="תאריך"><input type="date" className="input" value={date} onChange={(e) => { setDate(e.target.value); setRun(false); }} />
-            <span className="mt-1 block text-xs text-muted-foreground">{isSaturday ? "שבת — אין לימודים" : `יום ${DAY_HE[day]}`}</span></Field>
-          <Field label="מורה חסר/ה"><select className="input" value={missing} onChange={(e) => { setMissing(e.target.value); setRun(false); }}>
-            {teachers.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</select></Field>
-          <Field label="סיבה"><select className="input" value={reason} onChange={(e) => setReason(e.target.value)}>
-            {["מחלה", "השתלמות", "מילואים", "סיור / טיול", "אירוע משפחתי", "אחר"].map((r) => <option key={r}>{r}</option>)}</select></Field>
-        </div>
-        <div className="mt-4">
-          <div className="mb-1 text-sm font-medium">מורים נוספים שחסרים בתאריך זה <span className="text-xs font-normal text-muted-foreground">(לא יוצעו כממלאי מקום)</span></div>
-          <div className="flex flex-wrap items-center gap-2">
-            {absent.map((id) => <span key={id} className="inline-flex items-center gap-1 rounded-full border bg-destructive/10 px-2 py-0.5 text-xs text-destructive">
-              {teachers.find((t) => t.id === id)?.name}
-              <button aria-label="הסר" onClick={() => setAbsent((a) => a.filter((x) => x !== id))}>×</button></span>)}
-            <select className="input max-w-56" value="" onChange={(e) => { if (e.target.value) setAbsent((a) => [...a, e.target.value]); }}>
-              <option value="">+ הוסף מורה חסר/ה</option>
-              {teachers.filter((t) => t.id !== missing && !absent.includes(t.id)).map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-            </select>
-          </div>
-          {subs.some((x) => x.date === date && x.status !== "בוטל") && <p className="mt-1 text-xs text-muted-foreground">מורים שכבר הוחלפו בתאריך זה, וממלאי מקום שכבר שובצו בשעה מסוימת, לא יוצעו שוב באותה שעה.</p>}
-        </div>
-        {!isSaturday && !mt.working_days.includes(day) && <p className="mt-3 text-sm text-destructive">{mt.name} אינו/ה עובד/ת ביום {DAY_HE[day]}.</p>}
-        <div className="mt-4 flex flex-wrap items-center gap-2">
-          <div className="flex rounded-lg border bg-muted/50 p-1">
-            <button onClick={() => { setMode("hours"); setRun(false); }} className={`rounded-md px-3 py-1.5 text-sm font-medium transition ${mode === "hours" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>לפי שעות</button>
-            <button onClick={() => { setMode("day"); setRun(false); }} className={`rounded-md px-3 py-1.5 text-sm font-medium transition ${mode === "day" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>יום שלם</button>
-          </div>
-          {mode === "hours" && <button className="btn-ghost text-sm" disabled={isSaturday || !teachPs.length}
-            onClick={() => { setPeriods(teachPs); setRun(false); }}><ClipboardList className="h-4 w-4" />בחר את כל השעות של {mt.name}</button>}
-        </div>
-        {mode === "hours" && <>
-          <div className="mt-3 mb-2 text-sm text-muted-foreground">שעות חסרות (המערכת של {mt.name} ביום {DAY_HE[day]}):</div>
-          <div className="grid grid-cols-4 gap-2 md:grid-cols-6 lg:grid-cols-11">
-            {teachPs.map((p) => {
-              const s = slots.find((x) => x.teacher_id === missing && x.day_of_week === day && x.period === p);
-              const on = periods.includes(p);
-              return (
-                <button key={p} onClick={() => { toggle(p); setRun(false); }} className={`rounded-lg border-2 p-2 text-right text-xs transition ${on ? "border-primary bg-primary/10" : "border-transparent bg-muted/50 hover:border-border"}`}>
-                  <div className="mb-1 font-bold">שעה {p}</div>
-                  <span className={`rounded-full border px-1.5 py-0.5 ${BADGE["הוראה"]}`}>הוראה</span>
-                  {s?.subject && <div className="mt-1 truncate">{s.subject}</div>}
-                </button>);
-            })}
-          </div>
-        </>}
-        {mode === "day" && <p className="mt-3 text-sm text-muted-foreground">
-          {teachPs.length
-            ? <>מציג אפשרויות מילוי לכל אחת מ-{teachPs.length} השעות שבהן {mt.name} מלמד/ת ביום {DAY_HE[day]}: שעות {teachPs.join(", ")}.</>
-            : <>ל{mt.name} אין שיעורים ביום {DAY_HE[day]} — אין צורך במילוי מקום.</>}
-        </p>}
-         <button className="btn-primary mt-4" disabled={isSaturday || (mode === "hours" ? !selectedTeachingPeriods.length : !teachPs.length)} onClick={() => { setDone([]); setRun(true); }}>
-          <UserSearch className="h-4 w-4" />{mode === "day" ? "חפש ממלאי מקום ליום שלם" : "חפש ממלאי מקום"}
-        </button>
-      </Card>
-
-      {mode === "day" && run && dayResults.length > 0 && done.length === 0 && (
-        <Card title={`ממלא אחד לכל היום — יום ${DAY_HE[day]} (${date})`} icon={Users}
-          action={<span className="text-xs text-muted-foreground">{dayResults.length} מועמדים</span>}>
-          {(
-            <div className="space-y-2">{dayResults.map((c, i) => (
-              <div key={c.teacher.id} className={`flex flex-wrap items-center gap-3 rounded-lg border p-3 ${i === 0 ? "border-primary bg-primary/5" : ""}`}>
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-sm font-bold">{i + 1}</div>
-                <div className="min-w-36 flex-1">
-                  <div className="font-semibold">{c.teacher.name} {i === 0 && <span className="text-xs text-primary">· התאמה מיטבית</span>}</div>
-                </div>
-                <span className={`rounded-full border px-2 py-0.5 text-xs ${BADGE[c.status]}`}>{statusLabel(c)} בכל השעות</span>
-                <span className={`rounded-full px-2 py-0.5 text-xs ${c.underMax ? "bg-muted text-muted-foreground" : "bg-destructive/15 text-destructive"}`}>{c.hours}/{c.teacher.max_weekly_hours} ש"ש</span>
-                <button className="btn-primary text-sm" onClick={() => {
-                  teachPs.forEach((p) => onAssign(date, day, p, missing, c, reason)); setDone(teachPs);
-                }}>שבץ מורה זה לכל היום</button>
-              </div>))}</div>)}
-        </Card>
-      )}
-
-      {mode === "day" && run && results.length > 0 && <p className="text-sm text-muted-foreground">אפשרויות לכל שעה בנפרד — אפשר לשבץ ממלא שונה בכל שעה:</p>}
-      {mode === "day" && run && teachPs.length > 0 && results.length === 0 && <p className="text-sm font-medium text-primary">כל השעות של {mt.name} שובצו.</p>}
-      {results.map(({ p, slot, cands }) => (
-        <Card key={p} title={`שעה ${p} — ${slot && slot.activity_type !== "חלון" ? (slot.subject ?? slot.activity_type) : "אין שיעור"}${slot?.class_room ? " · " + slot.class_room : ""}`} icon={Users}
-          action={<span className="text-xs text-muted-foreground">{cands.length} מועמדים</span>}>
-          {cands.length === 0 ? <p className="text-muted-foreground">אין מורים בשהייה או בפרטני בשעה זו.</p> : (
-            <div className="space-y-2">{cands.map((c, i) => (
-              <div key={c.teacher.id} className={`flex flex-wrap items-center gap-3 rounded-lg border p-3 ${i === 0 ? "border-primary bg-primary/5" : ""}`}>
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-sm font-bold">{i + 1}</div>
-                <div className="min-w-36 flex-1">
-                  <div className="font-semibold">{c.teacher.name} {i === 0 && <span className="text-xs text-primary">· התאמה מיטבית</span>}</div>
-                </div>
-                <span className={`rounded-full border px-2 py-0.5 text-xs ${BADGE[c.status]}`}>{statusLabel(c)}</span>
-                <span className={`rounded-full px-2 py-0.5 text-xs ${c.underMax ? "bg-muted text-muted-foreground" : "bg-destructive/15 text-destructive"}`}>{c.hours}/{c.teacher.max_weekly_hours} ש"ש</span>
-                <button className="btn-primary text-sm" onClick={() => { onAssign(date, day, p, missing, c, reason); setPeriods((x) => x.filter((y) => y !== p)); setDone((x) => [...x, p]); }}>שבץ מורה זה כממלא מקום</button>
-              </div>))}</div>)}
-        </Card>
-      ))}
-      {!isSaturday && subs.some((s) => s.date === date && s.status !== "בוטל") && (
-        <>
-          {!showForm && <button className="btn-primary" onClick={() => setShowForm(true)}>סיימתי לשבץ — הצג טופס מ"מ ליום זה</button>}
-          {showForm && <SubForm date={date} day={day} subs={subs} teachers={teachers} baseSlots={slots} />}
-        </>
-      )}
     </div>
   );
 }
