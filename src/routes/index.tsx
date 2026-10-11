@@ -213,13 +213,13 @@ function Stat({ label, value, badge }: { label: string; value: number; badge?: A
 }
 
 function SlotCell({ s, off }: { s?: Slot | undefined; off?: boolean | undefined }) {
-  if (off) return <div className="h-full min-h-14 rounded-md bg-muted/40" title="לא עובד/ת" />;
-  if (!s || s.activity_type === "חלון") return <div className={`h-full min-h-14 rounded-md border border-dashed p-1.5 text-xs ${BADGE["חלון"]}`}>חלון</div>;
+  if (off) return <div className="h-full min-h-16 rounded-md bg-muted/40" title="לא עובד/ת" />;
+  if (!s || s.activity_type === "חלון") return <div className="h-full min-h-16 rounded-md border border-dashed bg-muted/40" title="פנוי" />;
   return (
-    <div className={`h-full min-h-14 rounded-md border p-1.5 text-xs ${BADGE[s.activity_type]} ${s.substitute_for ? "ring-2 ring-success" : ""}`}>
+    <div className={`h-full min-h-16 rounded-md border p-1.5 text-xs leading-snug ${BADGE[s.activity_type]} ${s.substitute_for ? "ring-2 ring-success" : ""}`}>
       <div className="font-semibold">{s.activity_type}{s.substitute_for && " · מ\"מ"}</div>
-      {s.subject && <div>{s.subject}</div>}
-      {s.class_room && <div className="opacity-80">{s.class_room}</div>}
+      {s.subject && <div className="mt-0.5 font-medium">{s.subject}</div>}
+      {s.class_room && <div className="opacity-70">{s.class_room}</div>}
     </div>
   );
 }
@@ -227,10 +227,18 @@ function SlotCell({ s, off }: { s?: Slot | undefined; off?: boolean | undefined 
 function Grid({ rows }: { rows: { label: string; cells: { s?: Slot | undefined; off?: boolean }[] }[] }) {
   return (
     <div className="overflow-x-auto">
-      <table className="w-full min-w-[800px] border-separate border-spacing-1 text-sm">
-        <thead><tr><th className="w-28"></th>{PERIODS.map((p) => <th key={p} className="font-medium text-muted-foreground">שעה {p}</th>)}</tr></thead>
+      <table className="w-full min-w-[900px] border-separate border-spacing-1 text-sm">
+        <thead><tr>
+          <th className="w-32"></th>
+          {PERIODS.map((p) => (
+            <th key={p} className="align-top px-1 pb-1 font-medium text-muted-foreground">
+              <div>שעה {p}</div>
+              <div className="text-[11px] font-normal" dir="ltr">{periodTime(p)}</div>
+            </th>
+          ))}
+        </tr></thead>
         <tbody>{rows.map((r) => (
-          <tr key={r.label}><td className="whitespace-nowrap ps-1 font-medium">{r.label}</td>
+          <tr key={r.label} className="transition hover:bg-accent/30"><td className="whitespace-nowrap ps-1 align-top font-medium">{r.label}</td>
             {r.cells.map((c, i) => <td key={i} className="align-top"><SlotCell s={c.s} off={c.off} /></td>)}</tr>
         ))}</tbody>
       </table>
@@ -250,13 +258,13 @@ function WeekGrid({ slots, teacher }: { slots: Slot[]; teacher?: Teacher | undef
   if (!teacher) return null;
   return (
     <div className="overflow-x-auto">
-      <table className="w-full min-w-[800px] border-separate border-spacing-1 text-sm">
+      <table className="w-full min-w-[900px] border-separate border-spacing-1 text-sm">
         <thead><tr>
           <th className="w-32"></th>
-          {DAYS.map((d) => <th key={d} className="font-medium text-muted-foreground">יום {DAY_HE[d]}</th>)}
+          {DAYS.map((d) => <th key={d} className="pb-1 font-medium text-muted-foreground">יום {DAY_HE[d]}</th>)}
         </tr></thead>
         <tbody>{PERIODS.map((p) => (
-          <tr key={p}>
+          <tr key={p} className="transition hover:bg-accent/30">
             <td className="whitespace-nowrap ps-1 align-top">
               <div className="font-medium">שעה {p}</div>
               <div className="text-xs text-muted-foreground" dir="ltr">{periodTime(p)}</div>
@@ -279,8 +287,9 @@ function WeekGrid({ slots, teacher }: { slots: Slot[]; teacher?: Teacher | undef
 
 function Legend() {
   return (
-    <div className="mt-3 flex flex-wrap gap-3 text-xs">
-      {(["הוראה", "שהייה", "פרטני", "חלון"] as Activity[]).map((a) => <span key={a} className={`rounded-full border px-2 py-0.5 ${BADGE[a]}`}>{a}</span>)}
+    <div className="mt-3 flex flex-wrap items-center gap-3 text-xs">
+      {(["הוראה", "שהייה", "פרטני"] as Activity[]).map((a) => <span key={a} className={`rounded-full border px-2 py-0.5 ${BADGE[a]}`}>{a}</span>)}
+      <span className="rounded-full border border-dashed bg-muted/40 px-2 py-0.5 text-muted-foreground">פנוי / לא עובד/ת</span>
       <span className="rounded-full px-2 py-0.5 ring-2 ring-success">מילוי מקום</span>
     </div>
   );
@@ -378,15 +387,16 @@ function Finder({ slots, teachers, onAssign }: { slots: Slot[]; teachers: Teache
         {!isSaturday && !mt.working_days.includes(day) && <p className="mt-3 text-sm text-destructive">{mt.name} אינו/ה עובד/ת ביום {DAY_HE[day]}.</p>}
         <div className="mt-4">
           <div className="mb-2 text-sm text-muted-foreground">שעות חסרות (המערכת של {mt.name} ביום {DAY_HE[day]}):</div>
-          <div className="grid grid-cols-4 gap-2 md:grid-cols-8">
+          <div className="grid grid-cols-4 gap-2 md:grid-cols-6 lg:grid-cols-11">
             {PERIODS.map((p) => {
               const s = slots.find((x) => x.teacher_id === missing && x.day_of_week === day && x.period === p);
+              const free = !s || s.activity_type === "חלון";
               const on = periods.includes(p);
               return (
                 <button key={p} onClick={() => { toggle(p); setRun(false); }} className={`rounded-lg border-2 p-2 text-right text-xs transition ${on ? "border-primary bg-primary/10" : "border-transparent bg-muted/50 hover:border-border"}`}>
                   <div className="mb-1 font-bold">שעה {p}</div>
-                  <span className={`rounded-full border px-1.5 py-0.5 ${BADGE[s?.activity_type ?? "חלון"]}`}>{s?.activity_type ?? "חלון"}</span>
-                  {s?.subject && <div className="mt-1 truncate">{s.subject}</div>}
+                  <span className={`rounded-full border px-1.5 py-0.5 ${free ? "border-dashed bg-muted/40 text-muted-foreground" : BADGE[s!.activity_type]}`}>{free ? "פנוי" : s!.activity_type}</span>
+                  {s?.subject && !free && <div className="mt-1 truncate">{s.subject}</div>}
                 </button>);
             })}
           </div>
@@ -395,7 +405,7 @@ function Finder({ slots, teachers, onAssign }: { slots: Slot[]; teachers: Teache
       </Card>
 
       {results.map(({ p, slot, cands }) => (
-        <Card key={p} title={`שעה ${p} — ${slot?.subject ?? slot?.activity_type ?? "חלון"}${slot?.class_room ? " · " + slot.class_room : ""}`} icon={Users}
+        <Card key={p} title={`שעה ${p} — ${slot && slot.activity_type !== "חלון" ? (slot.subject ?? slot.activity_type) : "אין שיעור"}${slot?.class_room ? " · " + slot.class_room : ""}`} icon={Users}
           action={<span className="text-xs text-muted-foreground">{cands.length} מועמדים</span>}>
           {cands.length === 0 ? <p className="text-muted-foreground">אין מורים בשהייה או בפרטני בשעה זו.</p> : (
             <div className="space-y-2">{cands.map((c, i) => (
