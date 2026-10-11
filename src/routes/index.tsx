@@ -1,12 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import {
   LayoutDashboard, Users, CalendarDays, UserSearch, Phone, CheckCircle2, X, Send, MessageSquare, School, Bell, ClipboardList,
 } from "lucide-react";
 import {
-  TEACHERS, DAYS, DAY_HE, PERIODS, buildSchedule, findSubstitutes, weeklyHours, dayFromDate,
+  TEACHERS, DAYS, DAY_HE, PERIODS, findSubstitutes, weeklyHours, dayFromDate,
   type Activity, type Day, type Slot, type Substitution, type Teacher, type Candidate,
 } from "@/lib/school";
+import { loadAll, saveSub, saveStatus, applySub } from "@/lib/school-db";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -33,12 +35,30 @@ const BADGE: Record<Activity, string> = {
 
 function App() {
   const [view, setView] = useState<View>("dashboard");
-  const [slots, setSlots] = useState<Slot[]>(() => buildSchedule());
-  const [subs, setSubs] = useState<Substitution[]>([]);
+  const [slots, setSlots] = useState<Slot[]>([]);
+  const [subs, setSubsState] = useState<Substitution[]>([]);
+  const [loaded, setLoaded] = useState(false);
   const [confirm, setConfirm] = useState<Substitution | null>(null);
   const [notify, setNotify] = useState<Substitution | null>(null);
   const teachers = TEACHERS;
   const tName = (id: string) => teachers.find((t) => t.id === id)?.name ?? "";
+
+  useEffect(() => {
+    loadAll().then(({ slots, subs }) => { setSlots(slots); setSubsState(subs); setLoaded(true); })
+      .catch(() => { toast.error("טעינת הנתונים נכשלה"); setLoaded(true); });
+  }, []);
+
+  // Persist status changes (e.g. cancel / approve) to the database
+  const setSubs = (fn: (p: Substitution[]) => Substitution[]) => {
+    setSubsState((prev) => {
+      const next = fn(prev);
+      next.forEach((n) => {
+        const o = prev.find((x) => x.id === n.id);
+        if (o && o.status !== n.status) void saveStatus(n.id, n.status);
+      });
+      return next;
+    });
+  };
 
   const assign = (date: string, day: Day, period: number, missingId: string, c: Candidate, reason: string) => {
     const orig = slots.find((s) => s.teacher_id === missingId && s.day_of_week === day && s.period === period);
@@ -46,15 +66,13 @@ function App() {
       id: crypto.randomUUID(), date, day, period, original_teacher_id: missingId, substitute_teacher_id: c.teacher.id,
       reason, status: "ממתין לאישור", subject: orig?.subject, class_room: orig?.class_room,
     };
-    setSlots((prev) => prev.map((s) => {
-      if (s.day_of_week !== day || s.period !== period) return s;
-      if (s.teacher_id === c.teacher.id) return { ...s, activity_type: "הוראה", subject: orig?.subject, class_room: orig?.class_room, substitute_for: missingId };
-      if (s.teacher_id === missingId) return { ...s, activity_type: "חלון", subject: undefined, class_room: undefined };
-      return s;
-    }));
-    setSubs((p) => [sub, ...p]);
+    setSlots((prev) => applySub(prev, sub));
+    setSubsState((p) => [sub, ...p]);
+    void saveSub(sub).catch(() => toast.error("שמירת השיבוץ נכשלה"));
     setConfirm(sub);
   };
+
+  if (!loaded) return <div dir="rtl" className="flex min-h-screen items-center justify-center text-muted-foreground">טוען נתונים…</div>;
 
   const nav: { id: View; label: string; icon: any }[] = [
     { id: "dashboard", label: "לוח בקרה", icon: LayoutDashboard },
@@ -229,10 +247,10 @@ function Legend() {
   );
 }
 
-const SUBJECTS = Array.from(new Set(TEACHERS.flatMap((t) => t.subjects)));
 
 function ScheduleView({ slots, teachers }: { slots: Slot[]; teachers: Teacher[] }) {
-  const [tid, setTid] = useState(teachers[0]!.id);
+  const SUBJECTS = Array.from(new Set(teachers.flatMap((t) => t.subjects)));
+  const [tid, setTid] = useState(teachers[0]?.id ?? "");
   const [subject, setSubject] = useState("");
   const [day, setDay] = useState<Day | "">("");
   const mode = day ? "day" : "teacher";
