@@ -387,7 +387,7 @@ function Finder({ slots, teachers, onAssign }: { slots: Slot[]; teachers: Teache
         {!isSaturday && !mt.working_days.includes(day) && <p className="mt-3 text-sm text-destructive">{mt.name} אינו/ה עובד/ת ביום {DAY_HE[day]}.</p>}
         <div className="mt-4">
           <div className="mb-2 text-sm text-muted-foreground">שעות חסרות (המערכת של {mt.name} ביום {DAY_HE[day]}):</div>
-          <div className="grid grid-cols-4 gap-2 md:grid-cols-8">
+          <div className="grid grid-cols-4 gap-2 md:grid-cols-6 lg:grid-cols-11">
             {PERIODS.map((p) => {
               const s = slots.find((x) => x.teacher_id === missing && x.day_of_week === day && x.period === p);
               const free = !s || s.activity_type === "חלון";
