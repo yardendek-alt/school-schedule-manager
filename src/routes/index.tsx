@@ -390,12 +390,13 @@ function Finder({ slots, teachers, onAssign }: { slots: Slot[]; teachers: Teache
           <div className="grid grid-cols-4 gap-2 md:grid-cols-8">
             {PERIODS.map((p) => {
               const s = slots.find((x) => x.teacher_id === missing && x.day_of_week === day && x.period === p);
+              const free = !s || s.activity_type === "חלון";
               const on = periods.includes(p);
               return (
                 <button key={p} onClick={() => { toggle(p); setRun(false); }} className={`rounded-lg border-2 p-2 text-right text-xs transition ${on ? "border-primary bg-primary/10" : "border-transparent bg-muted/50 hover:border-border"}`}>
                   <div className="mb-1 font-bold">שעה {p}</div>
-                  <span className={`rounded-full border px-1.5 py-0.5 ${BADGE[s?.activity_type ?? "חלון"]}`}>{s?.activity_type ?? "חלון"}</span>
-                  {s?.subject && <div className="mt-1 truncate">{s.subject}</div>}
+                  <span className={`rounded-full border px-1.5 py-0.5 ${free ? "border-dashed bg-muted/40 text-muted-foreground" : BADGE[s!.activity_type]}`}>{free ? "פנוי" : s!.activity_type}</span>
+                  {s?.subject && !free && <div className="mt-1 truncate">{s.subject}</div>}
                 </button>);
             })}
           </div>
@@ -404,7 +405,7 @@ function Finder({ slots, teachers, onAssign }: { slots: Slot[]; teachers: Teache
       </Card>
 
       {results.map(({ p, slot, cands }) => (
-        <Card key={p} title={`שעה ${p} — ${slot?.subject ?? slot?.activity_type ?? "חלון"}${slot?.class_room ? " · " + slot.class_room : ""}`} icon={Users}
+        <Card key={p} title={`שעה ${p} — ${slot && slot.activity_type !== "חלון" ? (slot.subject ?? slot.activity_type) : "אין שיעור"}${slot?.class_room ? " · " + slot.class_room : ""}`} icon={Users}
           action={<span className="text-xs text-muted-foreground">{cands.length} מועמדים</span>}>
           {cands.length === 0 ? <p className="text-muted-foreground">אין מורים בשהייה או בפרטני בשעה זו.</p> : (
             <div className="space-y-2">{cands.map((c, i) => (
