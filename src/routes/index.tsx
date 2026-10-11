@@ -9,6 +9,7 @@ import {
   type Activity, type Day, type Slot, type Substitution, type Teacher, type Candidate,
 } from "@/lib/school";
 import { loadAll, saveSub, saveStatus, applySub, saveAway } from "@/lib/school-db";
+import { SubForm } from "@/components/SubForm";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -403,6 +404,7 @@ function Finder({ slots, teachers, subs, onAssign }: { slots: Slot[]; teachers: 
   const teachPs = teachingPeriods(slots, missing, day);
 
   const [done, setDone] = useState<number[]>([]);
+  const [showForm, setShowForm] = useState(false);
   const list = mode === "day" ? teachPs.filter((p) => !done.includes(p)) : periods;
   const results = useMemo(() => run ? list.map((p) => ({ p, slot: slots.find((s) => s.teacher_id === missing && s.day_of_week === day && s.period === p), cands: findSubstitutes(teachers, slots, missing, day, p, date, busy) })) : [], [run, list.join(","), slots, missing, day, teachers, date, busy]);
   const dayResults = useMemo(() => run && mode === "day" ? findWholeDaySubstitutes(teachers, slots, missing, day, date, busy) : [], [run, mode, slots, missing, day, teachers, date, busy]);
@@ -510,6 +512,12 @@ function Finder({ slots, teachers, subs, onAssign }: { slots: Slot[]; teachers: 
               </div>))}</div>)}
         </Card>
       ))}
+      {!isSaturday && subs.some((s) => s.date === date && s.status !== "בוטל") && (
+        <>
+          {!showForm && <button className="btn-primary" onClick={() => setShowForm(true)}>סיימתי לשבץ — הצג טופס מ"מ ליום זה</button>}
+          {showForm && <SubForm date={date} day={day} subs={subs} teachers={teachers} />}
+        </>
+      )}
     </div>
   );
 }
