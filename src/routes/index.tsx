@@ -224,7 +224,7 @@ function SlotCell({ s, off }: { s?: Slot | undefined; off?: boolean }) {
   );
 }
 
-function Grid({ rows }: { rows: { label: string; cells: { s?: Slot; off?: boolean }[] }[] }) {
+function Grid({ rows }: { rows: { label: string; cells: { s?: Slot | undefined; off?: boolean }[] }[] }) {
   return (
     <div className="overflow-x-auto">
       <table className="w-full min-w-[800px] border-separate border-spacing-1 text-sm">
