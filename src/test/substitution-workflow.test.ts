@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { currentSelections, planPeriods, workflowBusy, type AbsencePlan } from "@/lib/substitution-workflow";
 import { findSubstitutes, type Slot, type Substitution, type Teacher } from "@/lib/school";
 
-const plans: AbsencePlan[] = [
+const plans: [AbsencePlan, AbsencePlan] = [
   { teacherId: "m", mode: "day", periods: [], reason: "מחלה" },
   { teacherId: "n", mode: "hours", periods: [3], reason: "מחלה" },
 ];
