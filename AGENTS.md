@@ -8,3 +8,5 @@
 > Commits you push to the connected branch sync back to Lovable and show up in
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
+
+- Keep daily-form classroom matching in a browser-safe helper shared with tests, so assignments reliably map to template cells despite classroom punctuation differences.

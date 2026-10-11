@@ -1,5 +1,6 @@
 import { Printer } from "lucide-react";
 import { DAY_HE, type Day, type Substitution, type Teacher } from "@/lib/school";
+import { classroomAssignments, normalizeClassroom as norm } from "@/lib/sub-form";
 
 // Columns follow the school's printed "מ"מ מורות" form (class + homeroom teacher)
 const CLASSES = [
@@ -8,13 +9,12 @@ const CLASSES = [
   ["ו'1", "איילת"], ["ט'1", "אסתי"], ['י"ב1', "דורית"],
 ] as const;
 const LEAD_UNTIL = 13; // first 13 classes have "מובילה" in hours 8–10
-const norm = (s?: string) => (s ?? "").replace(/['"\-\s]/g, "");
 
 export function SubForm({ date, day, subs, teachers }: { date: string; day: Day; subs: Substitution[]; teachers: Teacher[] }) {
   const name = (id: string) => teachers.find((t) => t.id === id)?.name ?? "";
   const list = subs.filter((s) => s.date === date && s.status !== "בוטל");
   const cell = (cls: string, p: number) =>
-    list.filter((s) => s.period === p && norm(s.class_room) === norm(cls)).map((s) => name(s.substitute_teacher_id)).join(", ");
+    classroomAssignments(list, date, cls, p).map((s) => name(s.substitute_teacher_id)).join(", ");
   const noClass = list.filter((s) => !CLASSES.some(([c]) => norm(c) === norm(s.class_room)));
   const missing = Array.from(new Set(list.map((s) => s.original_teacher_id)));
   const [y, m, d] = date.split("-");
@@ -44,8 +44,13 @@ export function SubForm({ date, day, subs, teachers }: { date: string; day: Day;
                 {CLASSES.map(([c], ci) => {
                   if (p >= 8 && ci < LEAD_UNTIL) {
                     if (p > 8) return null;
-                    const v = [8, 9, 10].map((q) => cell(c, q)).filter(Boolean).join(", ");
-                    return <td key={c} rowSpan={3} className="border border-foreground/60 p-1">{v || (c === "ד'1" ? "מוביל" : "מובילה")}</td>;
+                    return <td key={c} rowSpan={3} className="border border-foreground/60 p-1">
+                      <div>{c === "ד'1" ? "מוביל" : "מובילה"}</div>
+                      {[8, 9, 10].map((q) => {
+                        const replacement = cell(c, q);
+                        return replacement ? <div key={q} className="mt-1 font-semibold text-primary">שיעור {q}: {replacement}</div> : null;
+                      })}
+                    </td>;
                   }
                   return <td key={c} className="h-7 border border-foreground/60 p-1 font-semibold text-primary">{cell(c, p)}</td>;
                 })}
