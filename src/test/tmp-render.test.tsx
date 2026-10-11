@@ -14,6 +14,7 @@ const teachers = [
 const baseSlots = [
   { teacher_id: "mazal", day_of_week: "Monday", period: 3, activity_type: "הוראה", class_room: "כיתה א'1" },
   { teacher_id: "mazal", day_of_week: "Monday", period: 4, activity_type: "הוראה", class_room: "כיתה א'1" },
+  { teacher_id: "mazal", day_of_week: "Monday", period: 5, activity_type: "הוראה", class_room: "כיתה א'1" },
   { teacher_id: "yael", day_of_week: "Monday", period: 3, activity_type: "שהייה" },
   { teacher_id: "noa", day_of_week: "Monday", period: 4, activity_type: "פרטני" },
 ] as unknown as Slot[];
@@ -23,7 +24,7 @@ const subs = [
   { id: "r2", date: "2026-10-12", day: "Monday", period: 4, original_teacher_id: "mazal", substitute_teacher_id: "noa", class_room: "א'1", reason: "", status: "אושר" },
 ] as unknown as Substitution[];
 
-const plans: AbsencePlan[] = [{ teacherId: "mazal", mode: "hours", periods: [3, 4], reason: "מחלה" }];
+const plans: AbsencePlan[] = [{ teacherId: "mazal", mode: "hours", periods: [3, 4, 5], reason: "מחלה" }];
 
 describe("rendered daily form", () => {
   it("shows unbolded מ\"מ and single-letter activity marks", () => {
