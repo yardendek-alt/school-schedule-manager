@@ -52,6 +52,7 @@ export interface Candidate {
 
 // Only teachers who are in שהייה or פרטני at that exact period can substitute; any teacher can cover any lesson.
 export function findSubstitutes(teachers: Teacher[], slots: Slot[], missingId: string, day: Day, period: number, date?: string, busy?: Set<string>): Candidate[] {
+  if (!slots.some((s) => s.teacher_id === missingId && s.day_of_week === day && s.period === period && s.activity_type === "הוראה")) return [];
   return teachers
     .filter((t) => t.id !== missingId && canSubstitute(t, date) && !isBusy(busy, t.id, period))
     .map((t) => ({ t, s: slots.find((x) => x.teacher_id === t.id && x.day_of_week === day && x.period === period) }))
@@ -70,7 +71,7 @@ export function findSubstitutes(teachers: Teacher[], slots: Slot[], missingId: s
 export function teachingPeriods(slots: Slot[], teacherId: string, day: Day): number[] {
   return PERIODS.filter((p) => {
     const s = slots.find((x) => x.teacher_id === teacherId && x.day_of_week === day && x.period === p);
-    return !!s && s.activity_type !== "חלון";
+    return s?.activity_type === "הוראה";
   });
 }
 

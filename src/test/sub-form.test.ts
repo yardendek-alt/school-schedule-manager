@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { classroomAssignments } from "@/lib/sub-form";
+import { classroomAssignments, substituteOriginalActivity } from "@/lib/sub-form";
 import type { Substitution } from "@/lib/school";
 
 const assignment: Substitution = {
@@ -17,5 +17,15 @@ describe("daily form classroom placement", () => {
   });
   it("matches classroom prefixes and Hebrew punctuation", () => {
     expect(classroomAssignments([{ ...assignment, class_room: "כיתה א׳1" }], "2026-10-12", "א'1", 3)).toHaveLength(1);
+  });
+});
+
+describe("substitute's original activity", () => {
+  it.each(["שהייה", "פרטני"] as const)("returns %s from the original weekly slot", (activity_type) => {
+    expect(substituteOriginalActivity(assignment, [
+      { teacher_id: "yael", day_of_week: "Monday", period: 2, activity_type: "הוראה" },
+      { teacher_id: "yael", day_of_week: "Tuesday", period: 3, activity_type: "הוראה" },
+      { teacher_id: "yael", day_of_week: "Monday", period: 3, activity_type },
+    ])).toBe(activity_type);
   });
 });

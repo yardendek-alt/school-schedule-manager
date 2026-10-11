@@ -20,10 +20,23 @@ describe("teachingPeriods", () => {
     { day_of_week: "Sunday", period: 1, teacher_id: "m", activity_type: "הוראה" },
     { day_of_week: "Sunday", period: 3, teacher_id: "m", activity_type: "הוראה" },
     { day_of_week: "Sunday", period: 5, teacher_id: "m", activity_type: "חלון" },
+    { day_of_week: "Sunday", period: 6, teacher_id: "m", activity_type: "שהייה" },
+    { day_of_week: "Sunday", period: 7, teacher_id: "m", activity_type: "פרטני" },
     { day_of_week: "Sunday", period: 2, teacher_id: "x", activity_type: "הוראה" },
   ];
   it("returns only periods the teacher actually teaches that day", () =>
     expect(teachingPeriods(slots, "m", "Sunday")).toEqual([1, 3]));
+});
+
+describe("only teaching hours need coverage", () => {
+  it.each(["שהייה", "פרטני"] as const)("does not offer replacements for an absent %s period", (activity_type) => {
+    const slots: Slot[] = [
+      { teacher_id: "m", day_of_week: "Sunday", period: 3, activity_type },
+      { teacher_id: "a", day_of_week: "Sunday", period: 3, activity_type: "שהייה" },
+    ];
+    expect(findSubstitutes([T("m"), T("a")], slots, "m", "Sunday", 3)).toEqual([]);
+    expect(findWholeDaySubstitutes([T("m"), T("a")], slots, "m", "Sunday")).toEqual([]);
+  });
 });
 
 describe("findWholeDaySubstitutes", () => {
