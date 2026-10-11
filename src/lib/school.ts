@@ -29,23 +29,18 @@ export interface Candidate {
   teacher: Teacher; status: Activity; subjectMatch: boolean; hours: number; underMax: boolean; score: number;
 }
 
+// Only teachers who are in שהייה or פרטני at that exact period can substitute; any teacher can cover any lesson.
 export function findSubstitutes(teachers: Teacher[], slots: Slot[], missingId: string, day: Day, period: number): Candidate[] {
-  const missing = teachers.find((t) => t.id === missingId);
-  const orig = slots.find((s) => s.teacher_id === missingId && s.day_of_week === day && s.period === period);
-  const subj = orig?.subject;
   return teachers
-    .filter((t) => t.id !== missingId && t.working_days.includes(day))
-    .map((t) => {
-      const s = slots.find((x) => x.teacher_id === t.id && x.day_of_week === day && x.period === period);
-      return { t, status: (s?.activity_type ?? "חלון") as Activity };
-    })
-    .filter((c) => c.status !== "הוראה")
-    .map(({ t, status }) => {
-      const subjectMatch = subj ? t.subjects.includes(subj) : !!missing?.subjects.some((x) => t.subjects.includes(x));
+    .filter((t) => t.id !== missingId)
+    .map((t) => ({ t, s: slots.find((x) => x.teacher_id === t.id && x.day_of_week === day && x.period === period) }))
+    .filter(({ s }) => s && !s.substitute_for && (s.activity_type === "שהייה" || s.activity_type === "פרטני"))
+    .map(({ t, s }) => {
       const hours = weeklyHours(slots, t.id);
+      const status = s!.activity_type;
       const underMax = hours < t.max_weekly_hours;
-      const score = (subjectMatch ? 100 : 0) + (underMax ? 50 : 0) + (status === "חלון" ? 10 : status === "שהייה" ? 5 : 0) - hours * 0.1;
-      return { teacher: t, status, subjectMatch, hours, underMax, score };
+      const score = (underMax ? 50 : 0) + (status === "שהייה" ? 5 : 0) - hours * 0.1;
+      return { teacher: t, status, subjectMatch: true, hours, underMax, score };
     })
     .sort((a, b) => b.score - a.score);
 }
