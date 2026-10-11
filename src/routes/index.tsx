@@ -38,13 +38,14 @@ function App() {
   const [slots, setSlots] = useState<Slot[]>([]);
   const [subs, setSubsState] = useState<Substitution[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const [base, setBase] = useState<Slot[]>([]);
   const [confirm, setConfirm] = useState<Substitution | null>(null);
   const [notify, setNotify] = useState<Substitution | null>(null);
   const teachers = TEACHERS;
   const tName = (id: string) => teachers.find((t) => t.id === id)?.name ?? "";
 
   useEffect(() => {
-    loadAll().then(({ slots, subs }) => { setSlots(slots); setSubsState(subs); setLoaded(true); })
+    loadAll().then(({ slots, base, subs }) => { setSlots(slots); setBase(base); setSubsState(subs); setLoaded(true); })
       .catch(() => { toast.error("טעינת הנתונים נכשלה"); setLoaded(true); });
   }, []);
 
@@ -107,7 +108,7 @@ function App() {
         {view === "dashboard" && <Dashboard slots={slots} subs={subs} tName={tName} setSubs={setSubs} onNotify={setNotify} goFinder={() => setView("finder")} />}
         {view === "schedule" && <ScheduleView slots={slots} teachers={teachers} />}
         {view === "teachers" && <TeachersView slots={slots} teachers={teachers} />}
-        {view === "finder" && <Finder slots={slots} teachers={teachers} subs={subs} onAssign={assign} />}
+        {view === "finder" && <Finder slots={base} teachers={teachers} subs={subs} onAssign={assign} />}
       </main>
 
       {confirm && (
