@@ -2,3 +2,6 @@
 - [x] Process teachers sequentially with editable, visible selections and completion marks.
 - [x] Save selections and changes without double bookings; show final daily form.
 - [x] Verify workflow and conflict tests.
+- [ ] Limit daily form to chosen absences and mark uncovered classroom hours.
+- [ ] Equalize daily-form cells and compact activity labels; color candidate activities.
+- [ ] Verify updated form and rules.
