@@ -111,28 +111,37 @@ export type Database = {
       }
       teachers: {
         Row: {
+          away_reason: string
+          away_until: string | null
           created_at: string
           id: string
           max_weekly_hours: number
           name: string
+          no_substitute: boolean
           phone: string
           subjects: string[]
           working_days: string[]
         }
         Insert: {
+          away_reason?: string
+          away_until?: string | null
           created_at?: string
           id?: string
           max_weekly_hours?: number
           name: string
+          no_substitute?: boolean
           phone?: string
           subjects?: string[]
           working_days?: string[]
         }
         Update: {
+          away_reason?: string
+          away_until?: string | null
           created_at?: string
           id?: string
           max_weekly_hours?: number
           name?: string
+          no_substitute?: boolean
           phone?: string
           subjects?: string[]
           working_days?: string[]

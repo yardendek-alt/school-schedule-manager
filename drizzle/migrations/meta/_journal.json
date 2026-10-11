@@ -8,6 +8,13 @@
       "when": 1791735871907,
       "tag": "0000_school_schedule",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1791739472403,
+      "tag": "0001_teacher_availability",
+      "breakpoints": true
     }
   ]
 }
