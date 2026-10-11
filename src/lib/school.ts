@@ -59,7 +59,7 @@ export function findWholeDaySubstitutes(teachers: Teacher[], slots: Slot[], miss
   if (!ps.length) return [];
   return teachers
     .filter((t) => t.id !== missingId)
-    .map((t) => {
+    .map((t): Candidate | null => {
       const cells = ps.map((p) => ({ p, s: slots.find((x) => x.teacher_id === t.id && x.day_of_week === day && x.period === p) }));
       const ok = cells.every(({ s }) => s && !s.substitute_for && (s.activity_type === "שהייה" || s.activity_type === "פרטני"));
       if (!ok) return null;
