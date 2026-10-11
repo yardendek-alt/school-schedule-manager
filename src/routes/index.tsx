@@ -5,7 +5,7 @@ import {
   LayoutDashboard, Users, CalendarDays, UserSearch, Phone, CheckCircle2, X, Send, MessageSquare, School, Bell, ClipboardList,
 } from "lucide-react";
 import {
-  TEACHERS, DAYS, DAY_HE, PERIODS, findSubstitutes, weeklyHours, dayFromDate,
+  TEACHERS, DAYS, DAY_HE, PERIODS, findSubstitutes, findWholeDaySubstitutes, teachingPeriods, weeklyHours, dayFromDate,
   type Activity, type Day, type Slot, type Substitution, type Teacher, type Candidate,
 } from "@/lib/school";
 import { loadAll, saveSub, saveStatus, applySub } from "@/lib/school-db";
@@ -363,14 +363,22 @@ function Finder({ slots, teachers, onAssign }: { slots: Slot[]; teachers: Teache
   const isSaturday = !autoDay;
   const day: Day = (autoDay ?? "Sunday") as Day;
   const [missing, setMissing] = useState(teachers[0]?.id ?? "");
+  const [mode, setMode] = useState<"hours" | "day">("hours");
   const [periods, setPeriods] = useState<number[]>([]);
   const [reason, setReason] = useState("מחלה");
   const [run, setRun] = useState(false);
   const mt = teachers.find((t) => t.id === missing);
   if (!mt) return <p className="text-muted-foreground">לא נמצאו מורים במערכת.</p>;
   const toggle = (p: number) => setPeriods((x) => x.includes(p) ? x.filter((y) => y !== p) : [...x, p].sort());
+  const teachPs = teachingPeriods(slots, missing, day);
 
-  const results = useMemo(() => run ? periods.map((p) => ({ p, slot: slots.find((s) => s.teacher_id === missing && s.day_of_week === day && s.period === p), cands: findSubstitutes(teachers, slots, missing, day, p) })) : [], [run, periods, slots, missing, day, teachers]);
+  const results = useMemo(() => run && mode === "hours" ? periods.map((p) => ({ p, slot: slots.find((s) => s.teacher_id === missing && s.day_of_week === day && s.period === p), cands: findSubstitutes(teachers, slots, missing, day, p) })) : [], [run, mode, periods, slots, missing, day, teachers]);
+  const dayResults = useMemo(() => run && mode === "day" ? findWholeDaySubstitutes(teachers, slots, missing, day) : [], [run, mode, slots, missing, day, teachers]);
+
+  const statusLabel = (c: Candidate) => {
+    const sts = c.statuses ?? [c.status];
+    return sts.map((s) => (s === "שהייה" ? "בשהייה" : "בפרטני")).join(" + ");
+  };
 
   return (
     <div className="space-y-4">
@@ -385,8 +393,16 @@ function Finder({ slots, teachers, onAssign }: { slots: Slot[]; teachers: Teache
             {["מחלה", "השתלמות", "מילואים", "סיור / טיול", "אירוע משפחתי", "אחר"].map((r) => <option key={r}>{r}</option>)}</select></Field>
         </div>
         {!isSaturday && !mt.working_days.includes(day) && <p className="mt-3 text-sm text-destructive">{mt.name} אינו/ה עובד/ת ביום {DAY_HE[day]}.</p>}
-        <div className="mt-4">
-          <div className="mb-2 text-sm text-muted-foreground">שעות חסרות (המערכת של {mt.name} ביום {DAY_HE[day]}):</div>
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <div className="flex rounded-lg border bg-muted/50 p-1">
+            <button onClick={() => { setMode("hours"); setRun(false); }} className={`rounded-md px-3 py-1.5 text-sm font-medium transition ${mode === "hours" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>לפי שעות</button>
+            <button onClick={() => { setMode("day"); setRun(false); }} className={`rounded-md px-3 py-1.5 text-sm font-medium transition ${mode === "day" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>יום שלם</button>
+          </div>
+          {mode === "hours" && <button className="btn-ghost text-sm" disabled={isSaturday || !teachPs.length}
+            onClick={() => { setPeriods(teachPs); setRun(false); }}><ClipboardList className="h-4 w-4" />בחר את כל השעות של {mt.name}</button>}
+        </div>
+        {mode === "hours" && <>
+          <div className="mt-3 mb-2 text-sm text-muted-foreground">שעות חסרות (המערכת של {mt.name} ביום {DAY_HE[day]}):</div>
           <div className="grid grid-cols-4 gap-2 md:grid-cols-6 lg:grid-cols-11">
             {PERIODS.map((p) => {
               const s = slots.find((x) => x.teacher_id === missing && x.day_of_week === day && x.period === p);
@@ -400,11 +416,37 @@ function Finder({ slots, teachers, onAssign }: { slots: Slot[]; teachers: Teache
                 </button>);
             })}
           </div>
-        </div>
-        <button className="btn-primary mt-4" disabled={!periods.length || isSaturday} onClick={() => setRun(true)}><UserSearch className="h-4 w-4" />חפש ממלאי מקום</button>
+        </>}
+        {mode === "day" && <p className="mt-3 text-sm text-muted-foreground">
+          {teachPs.length
+            ? <>מציג ממלאי מקום שפנויים (בשהייה או בפרטני) בכל {teachPs.length} השעות שבהן {mt.name} מלמד/ת ביום {DAY_HE[day]}: שעות {teachPs.join(", ")}.</>
+            : <>ל{mt.name} אין שיעורים ביום {DAY_HE[day]} — אין צורך במילוי מקום.</>}
+        </p>}
+        <button className="btn-primary mt-4" disabled={isSaturday || (mode === "hours" ? !periods.length : !teachPs.length)} onClick={() => setRun(true)}>
+          <UserSearch className="h-4 w-4" />{mode === "day" ? "חפש ממלאי מקום ליום שלם" : "חפש ממלאי מקום"}
+        </button>
       </Card>
 
-      {results.map(({ p, slot, cands }) => (
+      {mode === "day" && run && (
+        <Card title={`יום שלם — יום ${DAY_HE[day]} (${date})`} icon={Users}
+          action={<span className="text-xs text-muted-foreground">{dayResults.length} מועמדים</span>}>
+          {dayResults.length === 0 ? <p className="text-muted-foreground">אין מורה שפנוי בשהייה או בפרטני בכל השעות הנדרשות. נסו את המצב "לפי שעות" לשיבוץ ממלאים שונים לשעות שונות.</p> : (
+            <div className="space-y-2">{dayResults.map((c, i) => (
+              <div key={c.teacher.id} className={`flex flex-wrap items-center gap-3 rounded-lg border p-3 ${i === 0 ? "border-primary bg-primary/5" : ""}`}>
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-sm font-bold">{i + 1}</div>
+                <div className="min-w-36 flex-1">
+                  <div className="font-semibold">{c.teacher.name} {i === 0 && <span className="text-xs text-primary">· התאמה מיטבית</span>}</div>
+                </div>
+                <span className={`rounded-full border px-2 py-0.5 text-xs ${BADGE[c.status]}`}>{statusLabel(c)} בכל השעות</span>
+                <span className={`rounded-full px-2 py-0.5 text-xs ${c.underMax ? "bg-muted text-muted-foreground" : "bg-destructive/15 text-destructive"}`}>{c.hours}/{c.teacher.max_weekly_hours} ש"ש</span>
+                <button className="btn-primary text-sm" onClick={() => {
+                  teachPs.forEach((p) => onAssign(date, day, p, missing, c, reason));
+                }}>שבץ מורה זה לכל היום</button>
+              </div>))}</div>)}
+        </Card>
+      )}
+
+      {mode === "hours" && results.map(({ p, slot, cands }) => (
         <Card key={p} title={`שעה ${p} — ${slot && slot.activity_type !== "חלון" ? (slot.subject ?? slot.activity_type) : "אין שיעור"}${slot?.class_room ? " · " + slot.class_room : ""}`} icon={Users}
           action={<span className="text-xs text-muted-foreground">{cands.length} מועמדים</span>}>
           {cands.length === 0 ? <p className="text-muted-foreground">אין מורים בשהייה או בפרטני בשעה זו.</p> : (
@@ -414,7 +456,7 @@ function Finder({ slots, teachers, onAssign }: { slots: Slot[]; teachers: Teache
                 <div className="min-w-36 flex-1">
                   <div className="font-semibold">{c.teacher.name} {i === 0 && <span className="text-xs text-primary">· התאמה מיטבית</span>}</div>
                 </div>
-                <span className={`rounded-full border px-2 py-0.5 text-xs ${BADGE[c.status]}`}>{c.status === "שהייה" ? "בשהייה" : "בפרטני"}</span>
+                <span className={`rounded-full border px-2 py-0.5 text-xs ${BADGE[c.status]}`}>{statusLabel(c)}</span>
                 <span className={`rounded-full px-2 py-0.5 text-xs ${c.underMax ? "bg-muted text-muted-foreground" : "bg-destructive/15 text-destructive"}`}>{c.hours}/{c.teacher.max_weekly_hours} ש"ש</span>
                 <button className="btn-primary text-sm" onClick={() => { onAssign(date, day, p, missing, c, reason); setPeriods((x) => x.filter((y) => y !== p)); }}>שבץ מורה זה כממלא מקום</button>
               </div>))}</div>)}
