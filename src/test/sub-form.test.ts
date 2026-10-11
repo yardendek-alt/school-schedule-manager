@@ -55,8 +55,9 @@ describe("explicit daily absence plans", () => {
   });
 
   it("requires coverage only for teaching hours, not prep or individual activity", () => {
-    const data = plannedFormData([{ ...plans[0], mode: "day" }], [slots[0],
-      { ...slots[1], activity_type: "שהייה" }, { ...slots[2], activity_type: "פרטני" }], [], assignment.date, "Monday");
+    const data = plannedFormData([{ teacherId: "mazal", mode: "day", periods: [], reason: "מחלה" }],
+      slots.map((slot) => ({ ...slot, activity_type: slot.period === 3 ? "הוראה" : slot.period === 4 ? "שהייה" : "פרטני" })),
+      [], assignment.date, "Monday");
     expect(data.uncovered.map((slot) => slot.period)).toEqual([3]);
   });
 });
