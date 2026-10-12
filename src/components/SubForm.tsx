@@ -51,7 +51,7 @@ export function SubForm({ date, day, subs, teachers, baseSlots, plans }: { date:
                   if (p >= 8 && p <= 10 && ci < LEAD_UNTIL) {
                     if (p !== 8) return null;
                     return <td key={c} rowSpan={3} className="border border-foreground/60 p-0" aria-label={`${c} שיעורים 8-10`}>
-                      <div className="sub-form-cell flex flex-col items-center justify-center gap-0.5">
+                      <div className="sub-form-cell flex h-full flex-col items-center justify-center gap-0.5">
                         <div>{c === "ד'1" ? "מוביל" : "מובילה"}</div>
                         {[8, 9, 10].map((lp) => (
                           <Fragment key={lp}>
