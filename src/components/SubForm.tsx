@@ -48,11 +48,24 @@ export function SubForm({ date, day, subs, teachers, baseSlots, plans }: { date:
               <tr key={p}>
                 <th className="whitespace-nowrap border border-foreground/60 p-0"><div className="sub-form-cell flex items-center justify-center">שיעור {p}</div></th>
                 {CLASSES.map(([c], ci) => {
+                  if (p >= 8 && p <= 10 && ci < LEAD_UNTIL) {
+                    if (p !== 8) return null;
+                    return <td key={c} rowSpan={3} className="border border-foreground/60 p-0" aria-label={`${c} שיעורים 8-10`}>
+                      <div className="sub-form-cell flex flex-col items-center justify-center gap-0.5">
+                        <div>{c === "ד'1" ? "מוביל" : "מובילה"}</div>
+                        {[8, 9, 10].map((lp) => (
+                          <Fragment key={lp}>
+                            {classroomAssignments(list, date, c, lp).map((sub) => <div key={sub.id} className="w-full break-words font-semibold text-primary">{replacementLabel(sub)}</div>)}
+                            {uncovered.some((slot) => slot.period === lp && norm(slot.class_room) === norm(c)) && <div className="text-base text-destructive">מ"מ</div>}
+                          </Fragment>
+                        ))}
+                      </div>
+                    </td>;
+                  }
                   const replacements = classroomAssignments(list, date, c, p);
                   const needsSubstitute = uncovered.some((slot) => slot.period === p && norm(slot.class_room) === norm(c));
                   return <td key={c} className="border border-foreground/60 p-0" aria-label={`${c} שיעור ${p}`}>
                     <div className="sub-form-cell flex flex-col items-center justify-center gap-0.5">
-                      {p >= 8 && ci < LEAD_UNTIL && <div>{c === "ד'1" ? "מוביל" : "מובילה"}</div>}
                       {replacements.map((sub) => <div key={sub.id} className="w-full break-words font-semibold text-primary">{replacementLabel(sub)}</div>)}
                       {needsSubstitute && <div className="text-base text-destructive">מ"מ</div>}
                     </div>
