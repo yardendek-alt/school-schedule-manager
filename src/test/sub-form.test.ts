@@ -44,8 +44,8 @@ describe("dedicated substitute label", () => {
     { id: "yael", name: "יעל" },
   ] as Teacher[];
 
-  it("marks the dedicated substitute as מ\"מ in every hour", () => {
-    expect(substituteFormLabel({ ...assignment, substitute_teacher_id: "olga" }, teachers, [])).toBe('אולגה (מ"מ)');
+  it("joins the dedicated substitute name to מ\"מ with a hyphen", () => {
+    expect(substituteFormLabel({ ...assignment, substitute_teacher_id: "olga" }, teachers, [])).toBe('אולגה-מ"מ');
   });
 
   it("keeps the activity mark for regular substitutes", () => {
