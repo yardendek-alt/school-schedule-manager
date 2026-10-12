@@ -37,6 +37,7 @@ describe("daily form table", () => {
   it("writes the lead label once per class across שיעור 8–10 in a merged cell", () => {
     renderForm();
     const leadCells = screen.getAllByText("מובילה").filter((el) => el.closest("td"));
+    console.log("lead cell count:", leadCells.length);
     expect(leadCells).toHaveLength(13); // one merged cell per lead class column
     const merged = leadCells[0].closest("td");
     expect(merged).toHaveAttribute("rowspan", "3");
