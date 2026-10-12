@@ -37,10 +37,10 @@ describe("daily form table", () => {
   it("writes the lead label once per class across שיעור 8–10 in a merged cell", () => {
     renderForm();
     const leadCells = screen.getAllByText("מובילה").filter((el) => el.closest("td"));
-    console.log("lead cell count:", leadCells.length);
-    expect(leadCells).toHaveLength(13); // one merged cell per lead class column
+    expect(leadCells).toHaveLength(12); // 13 lead columns, minus ד'1 which shows מוביל
     const merged = leadCells[0].closest("td");
     expect(merged).toHaveAttribute("rowspan", "3");
+    expect(screen.getByText("מוביל").closest("td")).toHaveAttribute("rowspan", "3");
     // No separate lead label inside rows 9 and 10
     expect(screen.getAllByText("מובילה").filter((el) => el.closest("td") !== merged && el.closest("td")?.getAttribute("rowspan") === "3")).toHaveLength(0);
   });
