@@ -47,8 +47,18 @@ describe("daily form table", () => {
     expect(allLead.every((el) => el.closest("td")?.getAttribute("rowspan") === "3")).toBe(true);
   });
 
-  it("writes the dedicated substitute as אולגה (מ\"מ) in the table", () => {
+  it("writes the dedicated substitute as אולגה-מ\"מ in the table", () => {
     renderForm();
-    expect(screen.getByText('אולגה (מ"מ)')).toBeInTheDocument();
+    expect(screen.getByText('אולגה-מ"מ')).toBeInTheDocument();
+  });
+
+  it("prints the lead label bigger and bold", () => {
+    renderForm();
+    const leads = screen.getAllByText("מובילה");
+    expect(leads.length).toBeGreaterThan(0);
+    for (const lead of leads) {
+      expect(lead.className).toContain("font-bold");
+      expect(lead.className).toContain("text-lg");
+    }
   });
 });
