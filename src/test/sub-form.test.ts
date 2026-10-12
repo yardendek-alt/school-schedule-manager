@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { activityShortLabel, classroomAssignments, plannedFormData, substituteOriginalActivity } from "@/lib/sub-form";
-import type { Substitution } from "@/lib/school";
+import { activityShortLabel, classroomAssignments, plannedFormData, substituteFormLabel, substituteOriginalActivity } from "@/lib/sub-form";
+import type { Substitution, Teacher } from "@/lib/school";
 
 const assignment: Substitution = {
   id: "replacement", date: "2026-10-12", day: "Monday", period: 3,
