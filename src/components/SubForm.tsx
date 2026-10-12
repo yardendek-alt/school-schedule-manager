@@ -2,7 +2,7 @@ import { Fragment } from "react";
 import { Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DAY_HE, type Day, type Slot, type Substitution, type Teacher } from "@/lib/school";
-import { activityShortLabel, classroomAssignments, normalizeClassroom as norm, plannedFormData, substituteFormLabel } from "@/lib/sub-form";
+import { classroomAssignments, normalizeClassroom as norm, plannedFormData, substituteFormLabel } from "@/lib/sub-form";
 import type { AbsencePlan } from "@/lib/substitution-workflow";
 
 // Columns follow the school's printed "מ"מ מורות" form (class + homeroom teacher)
@@ -15,12 +15,7 @@ const LEAD_UNTIL = 13; // Lead label spans שיעור 8–10 as one merged cell 
 
 export function SubForm({ date, day, subs, teachers, baseSlots, plans }: { date: string; day: Day; subs: Substitution[]; teachers: Teacher[]; baseSlots: Slot[]; plans: AbsencePlan[] }) {
   const name = (id: string) => teachers.find((t) => t.id === id)?.name ?? "";
-  const replacementLabel = (sub: Substitution) => {
-    const teacher = teachers.find((t) => t.id === sub.substitute_teacher_id);
-    const activity = teacher?.dedicated_substitute ? undefined : substituteOriginalActivity(sub, baseSlots);
-    const short = teacher?.dedicated_substitute ? 'מ"מ' : activityShortLabel(activity);
-    return `${teacher?.name ?? ""}${short ? ` (${short})` : ""}`;
-  };
+  const replacementLabel = (sub: Substitution) => substituteFormLabel(sub, teachers, baseSlots);
   const { assignments: list, uncovered, missingTeacherIds: missing } = plannedFormData(plans, baseSlots, subs, date, day);
   const noClass = list.filter((s) => !CLASSES.some(([c]) => norm(c) === norm(s.class_room)));
   const [y, m, d] = date.split("-");
