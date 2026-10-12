@@ -54,8 +54,11 @@ describe("daily form table", () => {
 
   it("prints the lead label bigger and bold", () => {
     renderForm();
-    const lead = screen.getByText("מובילה");
-    expect(lead.className).toContain("font-bold");
-    expect(lead.className).toContain("text-sm");
+    const leads = screen.getAllByText("מובילה");
+    expect(leads.length).toBeGreaterThan(0);
+    for (const lead of leads) {
+      expect(lead.className).toContain("font-bold");
+      expect(lead.className).toContain("text-sm");
+    }
   });
 });
