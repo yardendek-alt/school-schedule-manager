@@ -38,7 +38,7 @@ describe("daily form table", () => {
     renderForm();
     const leadCells = screen.getAllByText("מובילה").filter((el) => el.closest("td"));
     expect(leadCells).toHaveLength(12); // 13 lead columns, minus ד'1 which shows מוביל
-    const merged = leadCells[0].closest("td");
+    const merged = leadCells[0]!.closest("td");
     expect(merged).toHaveAttribute("rowspan", "3");
     expect(screen.getByText("מוביל").closest("td")).toHaveAttribute("rowspan", "3");
     // Every lead label lives in a merged cell — none in the separate rows 9/10
