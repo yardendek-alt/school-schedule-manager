@@ -114,6 +114,7 @@ export type Database = {
           away_reason: string
           away_until: string | null
           created_at: string
+          dedicated_substitute: boolean
           id: string
           max_weekly_hours: number
           name: string
@@ -126,6 +127,7 @@ export type Database = {
           away_reason?: string
           away_until?: string | null
           created_at?: string
+          dedicated_substitute?: boolean
           id?: string
           max_weekly_hours?: number
           name: string
@@ -138,6 +140,7 @@ export type Database = {
           away_reason?: string
           away_until?: string | null
           created_at?: string
+          dedicated_substitute?: boolean
           id?: string
           max_weekly_hours?: number
           name?: string

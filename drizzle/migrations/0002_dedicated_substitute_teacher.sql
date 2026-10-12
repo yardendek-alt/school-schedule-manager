@@ -1,0 +1,1 @@
+ALTER TABLE public.teachers ADD COLUMN IF NOT EXISTS dedicated_substitute boolean NOT NULL DEFAULT false; COMMENT ON COLUMN public.teachers.dedicated_substitute IS 'Dedicated substitute available without a base teaching schedule; date and period bookings still apply.';

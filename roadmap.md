@@ -6,3 +6,6 @@
 - [x] Equalize daily-form cells and compact activity labels; color candidate activities.
 - [x] Verify updated form and rules.
 - [x] Drop bold from the מ"מ mark; use ש for שהייה and פ for פרטני in the form.
+- [x] Enlarge missing-teacher footer names and its bold label.
+- [x] Add אולגה as a dedicated substitute available every period, with same-date/hour conflict protection.
+- [x] Verify Olga's availability and saved substitution workflow with real data.
