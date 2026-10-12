@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import { Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DAY_HE, type Day, type Slot, type Substitution, type Teacher } from "@/lib/school";
@@ -10,14 +11,15 @@ const CLASSES = [
   ["ג'3", "גלית"], ["ד'1", "רות"], ["ד'2", "ימית קינדה"], ["ה'1", "אוקסנה"], ["ה'2", "טל"], ["ה'3", "זוהרה"],
   ["ו'1", "איילת"], ["ט'1", "אסתי"], ['י"ב1', "דורית"],
 ] as const;
-const LEAD_UNTIL = 13; // Keep fixed lead labels in hours 8–10 without merging cells.
+const LEAD_UNTIL = 13; // Lead label spans שיעור 8–10 as one merged cell per class.
 
 export function SubForm({ date, day, subs, teachers, baseSlots, plans }: { date: string; day: Day; subs: Substitution[]; teachers: Teacher[]; baseSlots: Slot[]; plans: AbsencePlan[] }) {
   const name = (id: string) => teachers.find((t) => t.id === id)?.name ?? "";
   const replacementLabel = (sub: Substitution) => {
-    const activity = substituteOriginalActivity(sub, baseSlots);
-    const short = activityShortLabel(activity);
-    return `${name(sub.substitute_teacher_id)}${short ? ` (${short})` : ""}`;
+    const teacher = teachers.find((t) => t.id === sub.substitute_teacher_id);
+    const activity = teacher?.dedicated_substitute ? undefined : substituteOriginalActivity(sub, baseSlots);
+    const short = teacher?.dedicated_substitute ? 'מ"מ' : activityShortLabel(activity);
+    return `${teacher?.name ?? ""}${short ? ` (${short})` : ""}`;
   };
   const { assignments: list, uncovered, missingTeacherIds: missing } = plannedFormData(plans, baseSlots, subs, date, day);
   const noClass = list.filter((s) => !CLASSES.some(([c]) => norm(c) === norm(s.class_room)));
