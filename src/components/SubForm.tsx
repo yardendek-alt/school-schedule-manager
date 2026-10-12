@@ -59,7 +59,7 @@ export function SubForm({ date, day, subs, teachers, baseSlots, plans }: { date:
               </tr>
             ))}
             <tr>
-              <td colSpan={CLASSES.length + 1} className="border border-foreground/60 p-2 text-right text-sm">
+              <td colSpan={CLASSES.length + 1} className="border border-foreground/60 p-2 text-right text-lg">
                 <span className="font-bold">צוות הוראה חסר: </span>
                 {missing.map((id) => <span key={id} className="ml-3">{name(id)}</span>)}
               </td>
