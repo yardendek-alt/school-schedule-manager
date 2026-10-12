@@ -58,7 +58,7 @@ describe("daily form table", () => {
     expect(leads.length).toBeGreaterThan(0);
     for (const lead of leads) {
       expect(lead.className).toContain("font-bold");
-      expect(lead.className).toContain("text-sm");
+      expect(lead.className).toContain("text-lg");
     }
   });
 });

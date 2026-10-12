@@ -47,7 +47,7 @@ export function SubForm({ date, day, subs, teachers, baseSlots, plans }: { date:
                     if (p !== 8) return null;
                     return <td key={c} rowSpan={3} className="border border-foreground/60 p-0" aria-label={`${c} שיעורים 8-10`}>
                       <div className="sub-form-cell flex h-full flex-col items-center justify-center gap-0.5">
-                        <div className="text-sm font-bold leading-tight">{c === "ד'1" ? "מוביל" : "מובילה"}</div>
+                        <div className="text-lg font-bold leading-tight">{c === "ד'1" ? "מוביל" : "מובילה"}</div>
                         {[8, 9, 10].map((lp) => (
                           <Fragment key={lp}>
                             {classroomAssignments(list, date, c, lp).map((sub) => <div key={sub.id} className="w-full break-words font-semibold text-primary">{replacementLabel(sub)}</div>)}
