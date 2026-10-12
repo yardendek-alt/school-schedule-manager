@@ -38,6 +38,22 @@ describe("printed activity marks", () => {
   });
 });
 
+describe("dedicated substitute label", () => {
+  const teachers: Teacher[] = [
+    { id: "olga", name: "אולגה", dedicated_substitute: true },
+    { id: "yael", name: "יעל" },
+  ] as Teacher[];
+
+  it("marks the dedicated substitute as מ\"מ in every hour", () => {
+    expect(substituteFormLabel({ ...assignment, substitute_teacher_id: "olga" }, teachers, [])).toBe('אולגה (מ"מ)');
+  });
+
+  it("keeps the activity mark for regular substitutes", () => {
+    const slots = [{ teacher_id: "yael", day_of_week: "Monday" as const, period: 3, activity_type: "שהייה" as const }];
+    expect(substituteFormLabel(assignment, teachers, slots)).toBe("יעל (ש)");
+  });
+});
+
 describe("explicit daily absence plans", () => {
   const plans = [{ teacherId: "mazal", mode: "hours" as const, periods: [3, 4], reason: "מחלה" }];
   const slots = [3, 4, 5].map((period) => ({ teacher_id: "mazal", day_of_week: "Monday" as const,
