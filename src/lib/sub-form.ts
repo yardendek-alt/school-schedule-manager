@@ -1,4 +1,4 @@
-import type { Day, Slot, Substitution } from "@/lib/school";
+import type { Day, Slot, Substitution, Teacher } from "@/lib/school";
 import { planPeriods, type AbsencePlan } from "@/lib/substitution-workflow";
 
 export const normalizeClassroom = (value?: string) =>

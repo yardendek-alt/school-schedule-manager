@@ -2,7 +2,7 @@ import { Fragment } from "react";
 import { Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DAY_HE, type Day, type Slot, type Substitution, type Teacher } from "@/lib/school";
-import { activityShortLabel, classroomAssignments, normalizeClassroom as norm, plannedFormData, substituteOriginalActivity } from "@/lib/sub-form";
+import { activityShortLabel, classroomAssignments, normalizeClassroom as norm, plannedFormData, substituteFormLabel } from "@/lib/sub-form";
 import type { AbsencePlan } from "@/lib/substitution-workflow";
 
 // Columns follow the school's printed "מ"מ מורות" form (class + homeroom teacher)
