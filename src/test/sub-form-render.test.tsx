@@ -41,8 +41,10 @@ describe("daily form table", () => {
     const merged = leadCells[0].closest("td");
     expect(merged).toHaveAttribute("rowspan", "3");
     expect(screen.getByText("מוביל").closest("td")).toHaveAttribute("rowspan", "3");
-    // No separate lead label inside rows 9 and 10
-    expect(screen.getAllByText("מובילה").filter((el) => el.closest("td") !== merged && el.closest("td")?.getAttribute("rowspan") === "3")).toHaveLength(0);
+    // Every lead label lives in a merged cell — none in the separate rows 9/10
+    const allLead = [...screen.getAllByText(/^(מובילה|מוביל)$/)];
+    expect(allLead).toHaveLength(13);
+    expect(allLead.every((el) => el.closest("td")?.getAttribute("rowspan") === "3")).toBe(true);
   });
 
   it("writes the dedicated substitute as אולגה (מ\"מ) in the table", () => {
