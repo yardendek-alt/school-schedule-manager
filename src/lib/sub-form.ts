@@ -20,6 +20,14 @@ export function activityShortLabel(activity?: "שהייה" | "פרטני"): stri
   return activity === "פרטני" ? "פ" : activity === "שהייה" ? "ש" : "";
 }
 
+// Dedicated substitutes (no own class) are marked מ"מ instead of an activity
+export function substituteFormLabel(sub: Substitution, teachers: Teacher[], baseSlots: Slot[]): string {
+  const teacher = teachers.find((t) => t.id === sub.substitute_teacher_id);
+  const activity = teacher?.dedicated_substitute ? undefined : substituteOriginalActivity(sub, baseSlots);
+  const short = teacher?.dedicated_substitute ? 'מ"מ' : activityShortLabel(activity);
+  return `${teacher?.name ?? ""}${short ? ` (${short})` : ""}`;
+}
+
 export function plannedFormData(plans: AbsencePlan[], baseSlots: Slot[], subs: Substitution[], date: string, day: Day) {
   const plannedSlots = plans.flatMap((plan) => {
     const periods = planPeriods(plan, baseSlots, day);
