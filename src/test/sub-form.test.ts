@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { activityShortLabel, classroomAssignments, plannedFormData, substituteOriginalActivity } from "@/lib/sub-form";
-import type { Substitution } from "@/lib/school";
+import { activityShortLabel, classroomAssignments, plannedFormData, substituteFormLabel, substituteOriginalActivity } from "@/lib/sub-form";
+import type { Substitution, Teacher } from "@/lib/school";
 
 const assignment: Substitution = {
   id: "replacement", date: "2026-10-12", day: "Monday", period: 3,
@@ -35,6 +35,22 @@ describe("printed activity marks", () => {
     expect(activityShortLabel("שהייה")).toBe("ש");
     expect(activityShortLabel("פרטני")).toBe("פ");
     expect(activityShortLabel(undefined)).toBe("");
+  });
+});
+
+describe("dedicated substitute label", () => {
+  const teachers: Teacher[] = [
+    { id: "olga", name: "אולגה", dedicated_substitute: true },
+    { id: "yael", name: "יעל" },
+  ] as Teacher[];
+
+  it("marks the dedicated substitute as מ\"מ in every hour", () => {
+    expect(substituteFormLabel({ ...assignment, substitute_teacher_id: "olga" }, teachers, [])).toBe('אולגה (מ"מ)');
+  });
+
+  it("keeps the activity mark for regular substitutes", () => {
+    const slots = [{ teacher_id: "yael", day_of_week: "Monday" as const, period: 3, activity_type: "שהייה" as const }];
+    expect(substituteFormLabel(assignment, teachers, slots)).toBe("יעל (ש)");
   });
 });
 

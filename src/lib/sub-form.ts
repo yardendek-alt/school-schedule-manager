@@ -1,4 +1,4 @@
-import type { Day, Slot, Substitution } from "@/lib/school";
+import type { Day, Slot, Substitution, Teacher } from "@/lib/school";
 import { planPeriods, type AbsencePlan } from "@/lib/substitution-workflow";
 
 export const normalizeClassroom = (value?: string) =>
@@ -18,6 +18,14 @@ export function substituteOriginalActivity(sub: Substitution, baseSlots: Slot[])
 // Printed form uses single-letter marks: ש = שהייה, פ = פרטני
 export function activityShortLabel(activity?: "שהייה" | "פרטני"): string {
   return activity === "פרטני" ? "פ" : activity === "שהייה" ? "ש" : "";
+}
+
+// Dedicated substitutes (no own class) are marked מ"מ instead of an activity
+export function substituteFormLabel(sub: Substitution, teachers: Teacher[], baseSlots: Slot[]): string {
+  const teacher = teachers.find((t) => t.id === sub.substitute_teacher_id);
+  const activity = teacher?.dedicated_substitute ? undefined : substituteOriginalActivity(sub, baseSlots);
+  const short = teacher?.dedicated_substitute ? 'מ"מ' : activityShortLabel(activity);
+  return `${teacher?.name ?? ""}${short ? ` (${short})` : ""}`;
 }
 
 export function plannedFormData(plans: AbsencePlan[], baseSlots: Slot[], subs: Substitution[], date: string, day: Day) {

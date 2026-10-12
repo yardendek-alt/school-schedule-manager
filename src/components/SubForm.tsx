@@ -1,7 +1,8 @@
+import { Fragment } from "react";
 import { Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DAY_HE, type Day, type Slot, type Substitution, type Teacher } from "@/lib/school";
-import { activityShortLabel, classroomAssignments, normalizeClassroom as norm, plannedFormData, substituteOriginalActivity } from "@/lib/sub-form";
+import { classroomAssignments, normalizeClassroom as norm, plannedFormData, substituteFormLabel } from "@/lib/sub-form";
 import type { AbsencePlan } from "@/lib/substitution-workflow";
 
 // Columns follow the school's printed "מ"מ מורות" form (class + homeroom teacher)
@@ -10,15 +11,11 @@ const CLASSES = [
   ["ג'3", "גלית"], ["ד'1", "רות"], ["ד'2", "ימית קינדה"], ["ה'1", "אוקסנה"], ["ה'2", "טל"], ["ה'3", "זוהרה"],
   ["ו'1", "איילת"], ["ט'1", "אסתי"], ['י"ב1', "דורית"],
 ] as const;
-const LEAD_UNTIL = 13; // Keep fixed lead labels in hours 8–10 without merging cells.
+const LEAD_UNTIL = 13; // Lead label spans שיעור 8–10 as one merged cell per class.
 
 export function SubForm({ date, day, subs, teachers, baseSlots, plans }: { date: string; day: Day; subs: Substitution[]; teachers: Teacher[]; baseSlots: Slot[]; plans: AbsencePlan[] }) {
   const name = (id: string) => teachers.find((t) => t.id === id)?.name ?? "";
-  const replacementLabel = (sub: Substitution) => {
-    const activity = substituteOriginalActivity(sub, baseSlots);
-    const short = activityShortLabel(activity);
-    return `${name(sub.substitute_teacher_id)}${short ? ` (${short})` : ""}`;
-  };
+  const replacementLabel = (sub: Substitution) => substituteFormLabel(sub, teachers, baseSlots);
   const { assignments: list, uncovered, missingTeacherIds: missing } = plannedFormData(plans, baseSlots, subs, date, day);
   const noClass = list.filter((s) => !CLASSES.some(([c]) => norm(c) === norm(s.class_room)));
   const [y, m, d] = date.split("-");
@@ -46,11 +43,24 @@ export function SubForm({ date, day, subs, teachers, baseSlots, plans }: { date:
               <tr key={p}>
                 <th className="whitespace-nowrap border border-foreground/60 p-0"><div className="sub-form-cell flex items-center justify-center">שיעור {p}</div></th>
                 {CLASSES.map(([c], ci) => {
+                  if (p >= 8 && p <= 10 && ci < LEAD_UNTIL) {
+                    if (p !== 8) return null;
+                    return <td key={c} rowSpan={3} className="border border-foreground/60 p-0" aria-label={`${c} שיעורים 8-10`}>
+                      <div className="sub-form-cell flex h-full flex-col items-center justify-center gap-0.5">
+                        <div>{c === "ד'1" ? "מוביל" : "מובילה"}</div>
+                        {[8, 9, 10].map((lp) => (
+                          <Fragment key={lp}>
+                            {classroomAssignments(list, date, c, lp).map((sub) => <div key={sub.id} className="w-full break-words font-semibold text-primary">{replacementLabel(sub)}</div>)}
+                            {uncovered.some((slot) => slot.period === lp && norm(slot.class_room) === norm(c)) && <div className="text-base text-destructive">מ"מ</div>}
+                          </Fragment>
+                        ))}
+                      </div>
+                    </td>;
+                  }
                   const replacements = classroomAssignments(list, date, c, p);
                   const needsSubstitute = uncovered.some((slot) => slot.period === p && norm(slot.class_room) === norm(c));
                   return <td key={c} className="border border-foreground/60 p-0" aria-label={`${c} שיעור ${p}`}>
                     <div className="sub-form-cell flex flex-col items-center justify-center gap-0.5">
-                      {p >= 8 && ci < LEAD_UNTIL && <div>{c === "ד'1" ? "מוביל" : "מובילה"}</div>}
                       {replacements.map((sub) => <div key={sub.id} className="w-full break-words font-semibold text-primary">{replacementLabel(sub)}</div>)}
                       {needsSubstitute && <div className="text-base text-destructive">מ"מ</div>}
                     </div>
