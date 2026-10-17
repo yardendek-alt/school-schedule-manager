@@ -47,6 +47,22 @@ export async function saveStatus(id: string, status: Substitution["status"]) {
   await supabase.from("substitutions").update({ status }).eq("id", id);
 }
 
+// Replace a teacher's whole weekly base schedule. "חלון" cells are not stored.
+export async function saveTeacherSchedule(teacherId: string, slots: Slot[], workingDays: Day[]) {
+  const rows = slots.filter((s) => s.teacher_id === teacherId && s.activity_type !== "חלון").map((s) => ({
+    teacher_id: teacherId, day_of_week: s.day_of_week, period: s.period, activity_type: s.activity_type,
+    subject: s.subject?.trim() || null, class_room: s.class_room?.trim() || null,
+  }));
+  const del = await supabase.from("schedule_slots").delete().eq("teacher_id", teacherId);
+  if (del.error) throw del.error;
+  if (rows.length) {
+    const ins = await supabase.from("schedule_slots").insert(rows);
+    if (ins.error) throw ins.error;
+  }
+  const up = await supabase.from("teachers").update({ working_days: workingDays }).eq("id", teacherId);
+  if (up.error) throw up.error;
+}
+
 export async function saveAway(id: string, away_until: string | null, away_reason: string) {
   const { error } = await supabase.from("teachers").update({ away_until, away_reason }).eq("id", id);
   if (error) throw error;
