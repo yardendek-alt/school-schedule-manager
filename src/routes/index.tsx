@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
-  LayoutDashboard, Users, CalendarDays, UserSearch, Phone, CheckCircle2, X, Send, MessageSquare, School, Bell, ClipboardList,
+  LayoutDashboard, Users, CalendarDays, UserSearch, Phone, CheckCircle2, X, Send, MessageSquare, School, Bell, ClipboardList, Pencil,
 } from "lucide-react";
 import {
   TEACHERS, DAYS, DAY_HE, PERIODS, findSubstitutes, weeklyHours,
@@ -10,6 +10,7 @@ import {
 } from "@/lib/school";
 import { loadAll, saveStatus, applySub, saveAway, saveWorkflowAssignments } from "@/lib/school-db";
 import { SubstitutionWorkflow } from "@/components/SubstitutionWorkflow";
+import { ScheduleEditor } from "@/components/ScheduleEditor";
 import { planPeriods, workflowBusy, type AbsencePlan } from "@/lib/substitution-workflow";
 
 export const Route = createFileRoute("/")({
@@ -46,8 +47,12 @@ function App() {
   const teachers = TEACHERS;
   const tName = (id: string) => teachers.find((t) => t.id === id)?.name ?? "";
 
+  const reload = async () => {
+    const r = await loadAll();
+    setSlots(r.slots); setBase(r.base); setSubsState(r.subs);
+  };
   useEffect(() => {
-    loadAll().then(({ slots, base, subs }) => { setSlots(slots); setBase(base); setSubsState(subs); setLoaded(true); })
+    reload().then(() => setLoaded(true))
       .catch(() => { toast.error("טעינת הנתונים נכשלה"); setLoaded(true); });
   }, []);
 
@@ -124,7 +129,7 @@ function App() {
 
       <main className="mx-auto max-w-7xl px-4 py-6">
         {view === "dashboard" && <Dashboard slots={slots} subs={subs} tName={tName} setSubs={setSubs} onNotify={setNotify} goFinder={() => setView("finder")} />}
-        {view === "schedule" && <ScheduleView slots={slots} teachers={teachers} />}
+        {view === "schedule" && <ScheduleView slots={slots} base={base} teachers={teachers} onSaved={reload} />}
         {view === "teachers" && <TeachersView slots={slots} teachers={teachers} />}
         {view === "finder" && <SubstitutionWorkflow slots={base} teachers={teachers} subs={subs} onSave={saveTeacherChoices} />}
       </main>
@@ -315,32 +320,37 @@ function Legend() {
 }
 
 
-function ScheduleView({ slots, teachers }: { slots: Slot[]; teachers: Teacher[] }) {
+function ScheduleView({ slots, base, teachers, onSaved }: { slots: Slot[]; base: Slot[]; teachers: Teacher[]; onSaved: () => Promise<void> }) {
   const SUBJECTS = Array.from(new Set(teachers.flatMap((t) => t.subjects)));
   const [tid, setTid] = useState(teachers[0]?.id ?? "");
   const [subject, setSubject] = useState("");
   const [day, setDay] = useState<Day | "">("");
+  const [editing, setEditing] = useState(false);
   const mode = day ? "day" : "teacher";
   const filteredTeachers = teachers.filter((t) => !subject || t.subjects.includes(subject));
+  const teacher = teachers.find((t) => t.id === tid);
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-bold">מערכת שעות שבועית</h1>
       <div className="flex flex-wrap gap-3 rounded-xl border bg-card p-4">
-        <Field label="מורה"><select className="input" value={tid} onChange={(e) => setTid(e.target.value)} disabled={!!day}>
+        <Field label="מורה"><select className="input" value={tid} onChange={(e) => { setTid(e.target.value); setEditing(false); }} disabled={!!day || editing}>
           {filteredTeachers.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</select></Field>
-        <Field label="מקצוע"><select className="input" value={subject} onChange={(e) => {
+        <Field label="מקצוע"><select className="input" value={subject} disabled={editing} onChange={(e) => {
           setSubject(e.target.value);
           const f = teachers.filter((t) => !e.target.value || t.subjects.includes(e.target.value));
           if (f.length && !f.find((t) => t.id === tid)) setTid(f[0]!.id);
         }}>
           <option value="">כל המקצועות</option>{SUBJECTS.map((s) => <option key={s}>{s}</option>)}</select></Field>
-        <Field label="יום (תצוגת כל המורים)"><select className="input" value={day} onChange={(e) => setDay(e.target.value as Day | "")}>
+        <Field label="יום (תצוגת כל המורים)"><select className="input" value={day} disabled={editing} onChange={(e) => setDay(e.target.value as Day | "")}>
           <option value="">— תצוגה לפי מורה —</option>{DAYS.map((d) => <option key={d} value={d}>{DAY_HE[d]}</option>)}</select></Field>
       </div>
-      <Card title={mode === "day" ? `יום ${DAY_HE[day as Day]}` : `מערכת של ${teachers.find((t) => t.id === tid)?.name}`} icon={CalendarDays}>
+      <Card title={mode === "day" ? `יום ${DAY_HE[day as Day]}` : `${editing ? "עריכת מערכת" : "מערכת"} של ${teacher?.name ?? ""}`} icon={CalendarDays}
+        action={mode === "teacher" && teacher && !editing && <button className="btn-primary" onClick={() => setEditing(true)}><Pencil className="h-4 w-4" />עריכת מערכת שעות</button>}>
         {mode === "day"
           ? <Grid rows={filteredTeachers.map((t) => ({ label: t.name, cells: PERIODS.map((p) => ({ s: slots.find((s) => s.teacher_id === t.id && s.day_of_week === day && s.period === p), off: !t.working_days.includes(day as Day) })) }))} />
-          : <WeekGrid slots={slots} teacher={teachers.find((t) => t.id === tid)} />}
+          : editing && teacher
+            ? <ScheduleEditor key={teacher.id} teacher={teacher} base={base} onDone={() => setEditing(false)} onSaved={onSaved} />
+            : <WeekGrid slots={slots} teacher={teacher} />}
       </Card>
     </div>
   );
