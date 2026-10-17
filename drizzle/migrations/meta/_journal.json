@@ -29,6 +29,13 @@
       "when": 1792234833365,
       "tag": "0003_allow_schedule_edit",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1792235492869,
+      "tag": "0004_schedule_snapshots",
+      "breakpoints": true
     }
   ]
 }

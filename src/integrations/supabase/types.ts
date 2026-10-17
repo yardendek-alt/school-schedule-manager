@@ -52,6 +52,30 @@ export type Database = {
           },
         ]
       }
+      schedule_snapshots: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          slots: Json
+          working_days: Json
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name?: string
+          slots: Json
+          working_days: Json
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          slots?: Json
+          working_days?: Json
+        }
+        Relationships: []
+      }
       substitutions: {
         Row: {
           class_room: string | null
@@ -156,7 +180,8 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      create_schedule_snapshot: { Args: { _name: string }; Returns: string }
+      restore_schedule_snapshot: { Args: { _id: string }; Returns: undefined }
     }
     Enums: {
       [_ in never]: never
