@@ -19,7 +19,7 @@ export function ScheduleVersions({ onRestored }: { onRestored: () => Promise<voi
     setBusy(true);
     const { error } = await supabase.rpc("create_schedule_snapshot", { _name: name.trim() || "גרסה שמורה" });
     setBusy(false);
-    if (error) return toast.error("שמירת הגרסה נכשלה");
+    if (error) { toast.error("שמירת הגרסה נכשלה"); return; }
     setName(""); toast.success("הגרסה נשמרה"); void load();
   };
   const restore = async (s: Snap) => {
