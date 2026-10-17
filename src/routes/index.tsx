@@ -11,6 +11,7 @@ import {
 import { loadAll, saveStatus, applySub, saveAway, saveWorkflowAssignments } from "@/lib/school-db";
 import { SubstitutionWorkflow } from "@/components/SubstitutionWorkflow";
 import { ScheduleEditor } from "@/components/ScheduleEditor";
+import { ScheduleVersions } from "@/components/ScheduleVersions";
 import { planPeriods, workflowBusy, type AbsencePlan } from "@/lib/substitution-workflow";
 
 export const Route = createFileRoute("/")({
@@ -332,6 +333,7 @@ function ScheduleView({ slots, base, teachers, onSaved }: { slots: Slot[]; base:
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-bold">מערכת שעות שבועית</h1>
+      <ScheduleVersions onRestored={onSaved} />
       <div className="flex flex-wrap gap-3 rounded-xl border bg-card p-4">
         <Field label="מורה"><select className="input" value={tid} onChange={(e) => { setTid(e.target.value); setEditing(false); }} disabled={!!day || editing}>
           {filteredTeachers.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</select></Field>
