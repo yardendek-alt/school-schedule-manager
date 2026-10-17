@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { DAY_HE, type Day, type Slot, type Substitution, type Teacher } from "@/lib/school";
 import { classroomAssignments, normalizeClassroom as norm, plannedFormData, substituteFormLabel } from "@/lib/sub-form";
 import type { AbsencePlan } from "@/lib/substitution-workflow";
+import type { FormCell } from "@/lib/email-templates/daily-sub-form";
+import { SendFormButton } from "@/components/SendFormButton";
 
 // Columns follow the school's printed "מ"מ מורות" form (class + homeroom teacher)
 const CLASSES = [
@@ -19,12 +21,32 @@ export function SubForm({ date, day, subs, teachers, baseSlots, plans }: { date:
   const { assignments: list, uncovered, missingTeacherIds: missing } = plannedFormData(plans, baseSlots, subs, date, day);
   const noClass = list.filter((s) => !CLASSES.some(([c]) => norm(c) === norm(s.class_room)));
   const [y, m, d] = date.split("-");
+  const isUncovered = (c: string, p: number) => uncovered.some((slot) => slot.period === p && norm(slot.class_room) === norm(c));
+  const cellLines = (c: string, p: number): FormCell["lines"] => [
+    ...classroomAssignments(list, date, c, p).map((sub) => ({ text: replacementLabel(sub) })),
+    ...(isUncovered(c, p) ? [{ text: 'מ"מ', tone: "missing" as const }] : []),
+  ];
+  const payload = {
+    date, dayLabel: DAY_HE[day], dateLabel: `${d}/${m}/${y}`,
+    headers: CLASSES.map(([c, t]) => [c, t] as [string, string]),
+    rows: Array.from({ length: 10 }, (_, i) => i + 1).map((p) => ({
+      label: `שיעור ${p}`,
+      cells: CLASSES.map(([c], ci): FormCell | null => {
+        if (p >= 8 && ci < LEAD_UNTIL) return p !== 8 ? null : { rowSpan: 3, lines: [{ text: c === "ד'1" ? "מוביל" : "מובילה", tone: "lead" }, ...[8, 9, 10].flatMap((lp) => cellLines(c, lp))] };
+        return { lines: cellLines(c, p) };
+      }),
+    })),
+    missing: missing.map(name),
+  };
 
   return (
     <div className="rounded-xl border bg-card p-4 print-area">
       <div className="mb-3 flex items-center justify-between no-print">
         <h2 className="text-lg font-bold">טופס מ"מ מורות</h2>
-        <Button size="sm" onClick={() => window.print()}><Printer className="h-4 w-4" />הדפס</Button>
+        <div className="flex gap-2">
+          <SendFormButton payload={payload} />
+          <Button size="sm" onClick={() => window.print()}><Printer className="h-4 w-4" />הדפס</Button>
+        </div>
       </div>
       <div className="mb-3 text-center">
         <div className="text-lg font-bold underline">צוות הוראה</div>
