@@ -42,7 +42,7 @@ function DailySubForm({ dayLabel = '', dateLabel = '', headers = [], rows = [], 
 
 export const template = {
   component: DailySubForm,
-  subject: (d: Record<string, any>) => `טופס מ"מ מורות — יום ${d.dayLabel ?? ''} ${d.dateLabel ?? ''}`,
+  subject: (d: Record<string, any>) => `טופס מ"מ מורות — יום ${d['dayLabel'] ?? ''} ${d['dateLabel'] ?? ''}`,
   displayName: 'טופס מילוי מקום יומי',
   to: 'idud123@gmail.com',
   previewData: { dayLabel: 'ראשון', dateLabel: '18/10/2026', headers: [["א'1", 'יעל']], rows: [{ label: 'שיעור 1', cells: [{ lines: [{ text: 'אולגה-מ"מ' }] }] }], missing: ['יוסף מעיין'] },

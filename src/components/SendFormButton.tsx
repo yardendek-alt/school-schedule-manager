@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { sendDailyForm } from "@/lib/send-form.functions";
 
-type Payload = Parameters<typeof sendDailyForm>[0]["data"];
+type Payload = Parameters<typeof sendDailyForm>[0] extends infer O ? O extends { data: infer D } ? D : never : never;
 
 export function SendFormButton({ payload }: { payload: Payload }) {
   const [sending, setSending] = useState(false);
