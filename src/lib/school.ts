@@ -45,6 +45,8 @@ export function busyOnDate(subs: Substitution[], date: string, absent: string[] 
   return b;
 }
 const isBusy = (busy: Set<string> | undefined, id: string, p: number) => !!busy && (busy.has(id) || busy.has(`${id}@${p}`));
+// Dedicated substitutes are only available on their configured working days (e.g. Monday-only).
+const worksAsSub = (t: Teacher, day: Day) => !t.dedicated_substitute || t.working_days.includes(day);
 
 export interface Candidate {
   teacher: Teacher; status: Activity | "מילוי מקום"; statuses?: Activity[]; subjectMatch: boolean; hours: number; underMax: boolean; score: number;
@@ -54,7 +56,7 @@ export interface Candidate {
 export function findSubstitutes(teachers: Teacher[], slots: Slot[], missingId: string, day: Day, period: number, date?: string, busy?: Set<string>): Candidate[] {
   if (!slots.some((s) => s.teacher_id === missingId && s.day_of_week === day && s.period === period && s.activity_type === "הוראה")) return [];
   return teachers
-    .filter((t) => t.id !== missingId && canSubstitute(t, date) && !isBusy(busy, t.id, period))
+    .filter((t) => t.id !== missingId && canSubstitute(t, date) && worksAsSub(t, day) && !isBusy(busy, t.id, period))
     .map((t) => ({ t, s: slots.find((x) => x.teacher_id === t.id && x.day_of_week === day && x.period === period) }))
     .filter(({ t, s }) => t.dedicated_substitute ? !s || (!s.substitute_for && s.activity_type !== "הוראה") : s && !s.substitute_for && (s.activity_type === "שהייה" || s.activity_type === "פרטני"))
     .map(({ t, s }) => {
@@ -80,7 +82,7 @@ export function findWholeDaySubstitutes(teachers: Teacher[], slots: Slot[], miss
   const ps = teachingPeriods(slots, missingId, day);
   if (!ps.length) return [];
   return teachers
-    .filter((t) => t.id !== missingId && canSubstitute(t, date) && !ps.some((p) => isBusy(busy, t.id, p)))
+    .filter((t) => t.id !== missingId && canSubstitute(t, date) && worksAsSub(t, day) && !ps.some((p) => isBusy(busy, t.id, p)))
     .map((t): Candidate | null => {
       const cells = ps.map((p) => ({ p, s: slots.find((x) => x.teacher_id === t.id && x.day_of_week === day && x.period === p) }));
       const ok = cells.every(({ s }) => t.dedicated_substitute ? !s || (!s.substitute_for && s.activity_type !== "הוראה") : s && !s.substitute_for && (s.activity_type === "שהייה" || s.activity_type === "פרטני"));
