@@ -326,16 +326,22 @@ function ScheduleView({ slots, base, teachers, onSaved }: { slots: Slot[]; base:
   const [tid, setTid] = useState(teachers[0]?.id ?? "");
   const [subject, setSubject] = useState("");
   const [day, setDay] = useState<Day | "">("");
+  const [cls, setCls] = useState("");
   const [editing, setEditing] = useState(false);
-  const mode = day ? "day" : "teacher";
+  const normCls = (c: string) => c.replace(/[\s'"׳״`.\-]/g, "");
+  const CLASS_LIST = Array.from(new Map(slots.filter((s) => s.class_room?.trim()).map((s) => [normCls(s.class_room!), s.class_room!.trim()])).values())
+    .sort((a, b) => a.localeCompare(b, "he", { numeric: true }));
+  const mode = cls ? "class" : day ? "day" : "teacher";
   const filteredTeachers = teachers.filter((t) => !subject || t.subjects.includes(subject));
   const teacher = teachers.find((t) => t.id === tid);
+  const tName = (id: string) => teachers.find((t) => t.id === id)?.name ?? "";
+  const classSlots = cls ? slots.filter((s) => s.class_room && normCls(s.class_room) === normCls(cls)) : [];
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-bold">מערכת שעות שבועית</h1>
       <ScheduleVersions onRestored={onSaved} />
       <div className="flex flex-wrap gap-3 rounded-xl border bg-card p-4">
-        <Field label="מורה"><select className="input" value={tid} onChange={(e) => { setTid(e.target.value); setEditing(false); }} disabled={!!day || editing}>
+        <Field label="מורה"><select className="input" value={tid} onChange={(e) => { setTid(e.target.value); setEditing(false); }} disabled={!!day || !!cls || editing}>
           {filteredTeachers.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</select></Field>
         <Field label="מקצוע"><select className="input" value={subject} disabled={editing} onChange={(e) => {
           setSubject(e.target.value);
@@ -343,12 +349,37 @@ function ScheduleView({ slots, base, teachers, onSaved }: { slots: Slot[]; base:
           if (f.length && !f.find((t) => t.id === tid)) setTid(f[0]!.id);
         }}>
           <option value="">כל המקצועות</option>{SUBJECTS.map((s) => <option key={s}>{s}</option>)}</select></Field>
-        <Field label="יום (תצוגת כל המורים)"><select className="input" value={day} disabled={editing} onChange={(e) => setDay(e.target.value as Day | "")}>
+        <Field label="יום (תצוגת כל המורים)"><select className="input" value={day} disabled={editing || !!cls} onChange={(e) => setDay(e.target.value as Day | "")}>
           <option value="">— תצוגה לפי מורה —</option>{DAYS.map((d) => <option key={d} value={d}>{DAY_HE[d]}</option>)}</select></Field>
+        <Field label="כיתה"><select className="input" value={cls} disabled={editing} onChange={(e) => setCls(e.target.value)}>
+          <option value="">— כל הכיתות —</option>{CLASS_LIST.map((c) => <option key={c} value={c}>{c}</option>)}</select></Field>
       </div>
-      <Card title={mode === "day" ? `יום ${DAY_HE[day as Day]}` : `${editing ? "עריכת מערכת" : "מערכת"} של ${teacher?.name ?? ""}`} icon={CalendarDays}
+      <Card title={mode === "class" ? `מערכת כיתה ${cls}` : mode === "day" ? `יום ${DAY_HE[day as Day]}` : `${editing ? "עריכת מערכת" : "מערכת"} של ${teacher?.name ?? ""}`} icon={CalendarDays}
         action={mode === "teacher" && teacher && !editing && <button className="btn-primary" onClick={() => setEditing(true)}><Pencil className="h-4 w-4" />עריכת מערכת שעות</button>}>
-        {mode === "day"
+        {mode === "class"
+          ? <div className="overflow-x-auto">
+              <table className="w-full min-w-[900px] border-separate border-spacing-1 text-sm">
+                <thead><tr><th className="w-32"></th>{DAYS.map((d) => <th key={d} className="pb-1 font-medium text-muted-foreground">יום {DAY_HE[d]}</th>)}</tr></thead>
+                <tbody>{PERIODS.map((p) => (
+                  <tr key={p}>
+                    <td className="whitespace-nowrap ps-1 align-top"><div className="font-medium">שעה {p}</div><div className="text-xs text-muted-foreground" dir="ltr">{periodTime(p)}</div></td>
+                    {DAYS.map((d) => {
+                      const here = classSlots.filter((s) => s.day_of_week === d && s.period === p);
+                      return <td key={d} className="align-top">
+                        {here.length === 0 ? <div className="h-12 rounded-md border border-dashed bg-muted/40" /> : here.map((s, i) => (
+                          <div key={i} className={`mb-1 rounded-md border px-2 py-1 text-xs ${BADGE[s.activity_type]}`}>
+                            <div className="font-semibold">{tName(s.teacher_id)}</div>
+                            {s.subject && <div className="opacity-80">{s.subject}</div>}
+                          </div>
+                        ))}
+                      </td>;
+                    })}
+                  </tr>
+                ))}</tbody>
+              </table>
+              <Legend />
+            </div>
+          : mode === "day"
           ? <Grid rows={filteredTeachers.map((t) => ({ label: t.name, cells: PERIODS.map((p) => ({ s: slots.find((s) => s.teacher_id === t.id && s.day_of_week === day && s.period === p), off: !t.working_days.includes(day as Day) })) }))} />
           : editing && teacher
             ? <ScheduleEditor key={teacher.id} teacher={teacher} base={base} onDone={() => setEditing(false)} onSaved={onSaved} />
