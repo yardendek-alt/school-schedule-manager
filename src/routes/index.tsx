@@ -130,8 +130,8 @@ function App() {
 
       <main className="mx-auto max-w-7xl px-4 py-6">
         {view === "dashboard" && <Dashboard slots={slots} subs={subs} tName={tName} setSubs={setSubs} onNotify={setNotify} goFinder={() => setView("finder")} />}
-        {view === "schedule" && <ScheduleView slots={slots} base={base} teachers={teachers} onSaved={reload} />}
-        {view === "teachers" && <TeachersView slots={slots} teachers={teachers} />}
+        {view === "schedule" && <ScheduleView slots={base} base={base} teachers={teachers} onSaved={reload} />}
+        {view === "teachers" && <TeachersView slots={base} teachers={teachers} />}
         {view === "finder" && <SubstitutionWorkflow slots={base} teachers={teachers} subs={subs} onSave={saveTeacherChoices} />}
       </main>
 
