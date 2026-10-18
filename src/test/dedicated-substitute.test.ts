@@ -24,3 +24,12 @@ describe("אולגה dedicated substitute", () => {
     expect(findSubstitutes([missing, olga], slots, missing.id, "Tuesday", 3, sub.date, busyOnDate([], sub.date, [olga.id]))).toEqual([]);
   });
 });
+import { findSubstitutes as fs2 } from "@/lib/school";
+import { it as it2, expect as ex2 } from "vitest";
+it2("Monday-only dedicated substitute appears only on Monday", () => {
+  const david = { id: "david", name: "דוד", phone: "", subjects: [], max_weekly_hours: 0, working_days: ["Monday" as const], dedicated_substitute: true };
+  const m = { id: "m", name: "m", phone: "", subjects: [], max_weekly_hours: 0, working_days: ["Monday" as const, "Tuesday" as const] };
+  const slots = [{ teacher_id: "m", day_of_week: "Monday" as const, period: 2, activity_type: "הוראה" as const }, { teacher_id: "m", day_of_week: "Tuesday" as const, period: 2, activity_type: "הוראה" as const }];
+  ex2(fs2([david, m], slots, "m", "Monday", 2).map((c) => c.teacher.id)).toEqual(["david"]);
+  ex2(fs2([david, m], slots, "m", "Tuesday", 2)).toEqual([]);
+});
